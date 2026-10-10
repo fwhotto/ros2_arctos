@@ -1,10 +1,13 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="arctos">
 
+  <xacro:property name="arctos_joint_limits"
+    value="${xacro.load_yaml('$(find arctos_description)/config/physical_joint_limits.yaml')}" />
+
   <!-- Define arctos_link macro -->
   <xacro:macro name="arctos_link"
-    params="name origin_xyz origin_rpy material_name inertia_origin_xyz inertia_origin_rpy mass ixx iyy izz ixy iyz ixz">
-    <link name="${name}">
+    params="name origin_xyz origin_rpy material_name inertia_origin_xyz inertia_origin_rpy mass ixx iyy izz ixy iyz ixz prefix:=''">
+    <link name="${prefix}${name}">
       <visual>
         <origin xyz="${origin_xyz}" rpy="${origin_rpy}" />
         <geometry>
@@ -26,38 +29,19 @@
     </link>
   </xacro:macro>
 
-  <!-- Define arctos_joint macro with a default value for axis_xyz -->
-  <!-- TODO: Add param for mechanicalReduction -->
+  <!-- Geometry only: ROS control belongs in a backend wrapper. Damping is a
+       modest numerical regularization (N m s/rad), not measured gear friction. -->
   <xacro:macro name="arctos_joint"
-    params="name type parent child origin_xyz origin_rpy axis_xyz='0 0 0' limit_u limit_l limit_e limit_v">
-    <joint name="${name}" type="${type}">
-      <parent link="${parent}" />
-      <child link="${child}" />
+    params="name parent child origin_xyz origin_rpy axis_xyz prefix:='' damping:=0.1">
+    <xacro:property name="limits" value="${arctos_joint_limits[name]}" />
+    <joint name="${prefix}${name}" type="revolute">
+      <parent link="${prefix}${parent}" />
+      <child link="${prefix}${child}" />
       <origin xyz="${origin_xyz}" rpy="${origin_rpy}" />
       <axis xyz="${axis_xyz}" />
-      <limit upper="${limit_u}" lower="${limit_l}" effort="${limit_e}" velocity="${limit_v}" />
-    </joint>
-
-    <!-- Add transmission element -->
-    <transmission name="transmission_${name}">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}">
-        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <mechanicalReduction>1.0</mechanicalReduction>
-      </actuator>
-    </transmission>
-  </xacro:macro>
-
-  <xacro:macro name="arctos_control" params="name limit_u limit_l">
-    <joint name="${name}">
-      <command_interface name="position">
-            <param name="min">${limit_l}</param>
-            <param name="max">${limit_u}</param>
-      </command_interface>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
+      <limit upper="${limits['upper']}" lower="${limits['lower']}"
+        effort="${limits['effort']}" velocity="${limits['velocity']}" />
+      <dynamics damping="${damping}" friction="0.0" />
     </joint>
   </xacro:macro>
 

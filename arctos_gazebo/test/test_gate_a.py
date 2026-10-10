@@ -1,6 +1,7 @@
 """Gate A checks dependency boundaries and installed assets, not robot motion."""
 
 from pathlib import Path
+import shutil
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -44,8 +45,12 @@ def test_simulation_dependency_closure():
 @pytest.mark.parametrize("package", sorted(PACKAGES))
 def test_ros_dependencies_are_available(package):
     for dependency in dependencies(package):
-        if dependency == "python3-pytest":
+        if dependency in {"python3-pytest", "python3-numpy", "python3-yaml"}:
             continue  # rosdep system dependency, not an ament package
+        if dependency == "urdfdom":
+            # urdfdom is plain CMake and has no ament resource-index entry.
+            assert shutil.which("check_urdf")
+            continue
         assert Path(get_package_share_directory(dependency)).is_dir()
 
 

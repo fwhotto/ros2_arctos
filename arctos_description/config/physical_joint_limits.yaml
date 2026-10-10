@@ -1,0 +1,9 @@
+# Canonical simulation bounds, in radians, rad/s and N m.
+# See docs/MODEL_REVIEW.md for provenance and unresolved physical calibration.
+# X velocity uses the conservative existing reduced-model value (not 15 rad/s).
+X_joint: {lower: -3.141592653589793, upper: 3.141592653589793, effort: 24.3, velocity: 1.4}
+Y_joint: {lower: -0.96, upper: 2.18, effort: 270.0, velocity: 1.4}
+Z_joint: {lower: -1.5707963267948966, upper: 1.2217304763960306, effort: 97.0, velocity: 1.4}
+A_joint: {lower: -3.141592653589793, upper: 3.141592653589793, effort: 22.0, velocity: 4.4}
+B_joint: {lower: -1.55, upper: 1.55, effort: 16.0, velocity: 3.0}
+C_joint: {lower: -3.141592653589793, upper: 3.141592653589793, effort: 16.0, velocity: 3.0}

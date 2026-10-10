@@ -1,0 +1,9 @@
+# Gate B validated bare-arm pose. Shared input for the Gate C/D backends.
+# Angles in radians; ground/support surface is z=0 and base is fixed to world.
+initial_positions:
+  X_joint: 0.0
+  Y_joint: 0.0
+  Z_joint: 0.0
+  A_joint: 0.0
+  B_joint: 0.0
+  C_joint: 0.0

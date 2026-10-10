@@ -47,4 +47,4 @@ colcon --log-base "$output/log" test --base-paths "${packages[@]}" \
   --build-base "$output/build" --install-base "$output/install" \
   --event-handlers console_direct+ --return-code-on-test-failure
 colcon test-result --test-result-base "$output/build" --verbose
-echo "Gate A dependency/build/package validation passed: $output"
+echo "Jazzy dependency/build/model validation passed: $output"

@@ -1,7 +1,8 @@
 # Simulation interface contract
 
-This is the agreed target contract for Gates B–E. Gate A establishes package
-boundaries; existing model and launch files have not yet been migrated to it.
+This is the agreed contract for Gates B–E. Gate B implements the geometry,
+frames, optional attachment and initial pose. Controller and MoveIt runtime
+configuration follow in later gates.
 
 | Interface | Decision |
 | --- | --- |
@@ -23,14 +24,13 @@ boundaries; existing model and launch files have not yet been migrated to it.
 | Time | Simulator `/clock` and `use_sim_time=true` in Gazebo; wall time in mock |
 | Gripper | Optional, disabled in the first milestone |
 
-## Initial pose: validation pending
+## Validated initial pose
 
-The candidate is zero radians for all six arm joints, matching the existing
-home configuration. This is **not yet certified collision-free**. Gate B must
-validate it against the corrected model and support geometry, or select a new
-pose. Gate C will install one shared initial-position configuration consumed by
-mock, simulation and named planning states. Do not duplicate an unvalidated pose
-across newly added configuration files.
+All six arm joints are at zero radians. The authoritative configuration is
+`arctos_control/config/initial_positions.yaml`; Gate C/D backends and later
+planning states should consume it. MoveIt/FCL verifies the bare arm is free of
+non-adjacent self-collision and clears a support surface at world z=0, permitting
+only the mounted base to contact the support.
 
-Joint axes/limits and physical properties remain subject to Gate B's model
-review. This contract fixes public names and ownership, not disputed geometry.
+See [the model review](MODEL_REVIEW.md) for axis/limit decisions, inertia
+provenance, the fixed gripper preview, and the scope of collision validation.

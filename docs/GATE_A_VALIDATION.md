@@ -4,7 +4,7 @@ Date: 2026-10-10.
 
 ## Environment
 
-- Host: Ubuntu 24.04.5, x86-64 Linux.
+- Host: Ubuntu 24.04.5, aarch64 Linux (architecture corrected during Gate B review).
 - ROS underlay: `/opt/ros/jazzy` only; validator clears inherited overlays.
 - Gazebo Sim: 8.15.0 (Harmonic).
 - Installed MoveIt: 2.12.4; `gz_ros2_control`: 1.2.20.

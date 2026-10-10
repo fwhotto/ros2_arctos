@@ -1,4 +1,4 @@
-# Jazzy simulation development: Gate A
+# Jazzy simulation development: Gates A and B
 
 ## Supported environment
 
@@ -6,9 +6,10 @@
 - MoveIt 2 and `gz_ros2_control` from the Jazzy binary packages.
 - Source only `/opt/ros/jazzy/setup.bash` before building this package set.
 
-Gate A checks dependencies, packaging and installation. It does not yet provide
-a runnable Gazebo arm. Existing Humble-oriented demo launches still contain
-hardware/model configuration that will be addressed in later gates.
+Gate A checks dependencies, packaging and installation. Gate B adds a canonical
+bare-arm model with physical-property, SDF conversion and collision tests. There
+is not yet a runnable Gazebo arm. Existing demo/controller/MoveIt configuration
+will be migrated in later gates.
 
 ## Dependency installation
 
@@ -40,7 +41,7 @@ separately where available. The Gate A package closure does not require MongoDB.
 ```bash
 bash scripts/validate_jazzy.sh
 # Or select a fresh output directory:
-bash scripts/validate_jazzy.sh /tmp/opencode/arctos-gate-a
+bash scripts/validate_jazzy.sh /tmp/opencode/arctos-gate-b
 ```
 
 The script clears inherited overlays, sources only Jazzy, checks rosdep and
@@ -57,6 +58,12 @@ Tests cover:
 - Declared ROS dependencies are discoverable in the sourced install.
 - All current model, mesh, launch and configuration resources are installed
   with matching contents; the same check covers future world files.
+- URDF parsing, shared reduced/full geometry, prefixes, backend-independent
+  model expansion and optional fixed gripper attachment.
+- Physical bounds, inertial plausibility, CAD assembly alignment and clearance.
+- SDF articulation/anchoring and tool frame preservation.
+- Actual MoveIt/FCL self-collision/support tests, with obstructed and folded
+  poses as negative controls. The legacy MoveIt SRDF is not used for these tests.
 
 The output directory contains colcon logs/results, the selected package list,
 installed Jazzy package versions and Gazebo version. This supports repeating the
@@ -66,12 +73,13 @@ versions; retain the version inventory alongside validation results.
 To source the validated packages, use the reported directory:
 
 ```bash
-source /tmp/opencode/arctos-gate-a/install/setup.bash
+source /tmp/opencode/arctos-gate-b/install/setup.bash
 ```
 
 ## Scope of evidence
 
 An isolated underlay-only build on an existing Noble host verifies that no
 workspace overlay supplies missing Arctos packages. It is not a fresh-container
-installation test. Dependency resolution is checked with rosdep; runtime robot
-description, collision, controller and motion tests are later gates.
+installation test. Dependency resolution is checked with rosdep. Model and
+collision tests run headlessly using the installed description. Controller
+activation, gravity-loaded pose holding and motion execution are later gates.

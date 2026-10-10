@@ -14,8 +14,8 @@ Start with a bare arm and an explicit tool attachment frame. Gripper actuation,
 grasping, sensors, accurate actuator dynamics, multi-arm operation, and physical
 hardware validation are subsequent milestones.
 
-This plan is based on source inspection, not successful builds or runtime tests.
-Validate the environment and current package behavior during implementation.
+The original plan was based on source inspection. Completed validation is
+recorded below and in the gate reports; later runtime milestones remain untested.
 
 ### Gate A implementation status (2026-10-10)
 
@@ -28,6 +28,17 @@ installation. See `docs/JAZZY_SETUP.md` and `docs/GATE_A_VALIDATION.md`.
 The interface contract is documented in `docs/INTERFACE_CONTRACT.md` as the
 target for later gates. Initial-pose collision validation remains in Gate B;
 the existing robot and runtime launches have not yet been migrated.
+
+### Gate B implementation status (2026-10-10)
+
+The canonical bare-arm model and reference comparison are complete. The full
+and reduced variants now share geometry, axes and limits; the default model has
+no control backend. The all-zero pose passes MoveIt/FCL self-collision and
+support-clearance checks, and SDF conversion retains six moving joints and the
+world anchor. All 27 pytest cases pass in a fresh isolated Jazzy build.
+
+See `docs/MODEL_REVIEW.md` and `docs/GATE_B_VALIDATION.md` for physical-property
+provenance, the optional fixed gripper preview, and validation boundaries.
 
 ## Architecture
 
@@ -98,12 +109,12 @@ Complete this short design step before parallel implementation.
       authority for each TF transform.
 - [x] Define backend selection for `mock` and `gazebo`; preserve an extension
       point for hardware without claiming Jazzy hardware support yet.
-- [ ] Choose one collision-free initial joint configuration, consumed by all
-      relevant components.
-- [ ] Make the gripper optional and disabled for the initial milestone.
+- [x] Choose one collision-free initial joint configuration, consumed by all
+      relevant components (shared file established; later backends will consume it).
+- [x] Make the gripper optional and disabled for the initial milestone.
 
-Checked items above indicate contract decisions, not completed runtime changes.
-Optional gripper implementation and initial-pose validation require Gate B.
+Checked items above indicate contract decisions and Gate B model changes, not
+completed controller/MoveIt runtime integration.
 
 ## A. Jazzy environment and dependencies
 
@@ -150,28 +161,33 @@ reference, not as a replacement simulation stack.
 
 ### Tasks
 
-- [ ] Compare joint origins, axes, and mesh alignment across the two projects;
+- [x] Compare joint origins, axes, and mesh alignment across the two projects;
       document the chosen convention and provenance of adopted model data.
-- [ ] Refactor full-arm geometry into reusable Xacro macros, independent of the
+- [x] Refactor full-arm geometry into reusable Xacro macros, independent of the
       hardware backend.
-- [ ] Reconcile the full/reduced model Y-axis direction discrepancy.
-- [ ] Correct reversed Y control limits and malformed expressions such as
+- [x] Reconcile the full/reduced model Y-axis direction discrepancy.
+- [x] Correct reversed Y control limits and malformed expressions such as
       `{-2*pi}`.
-- [ ] Reconcile physical and control bounds, including Z and wrist limits.
-- [ ] Validate masses, centers of mass, inertia tensor symmetry/positivity and
+- [x] Reconcile physical and control bounds, including Z and wrist limits.
+- [x] Validate masses, centers of mass, inertia tensor symmetry/positivity and
       physical plausibility; investigate the wrist discrepancy specifically.
-- [ ] Make the gripper optional so zero-mass moving jaws do not enter the
+- [x] Make the gripper optional so zero-mass moving jaws do not enter the
       initial simulation.
-- [ ] Add a documented tool attachment frame.
-- [ ] Remove obsolete ROS 1-style transmissions from the new simulation path.
-- [ ] Check collision geometry, ground clearance, initial self-collisions and
+- [x] Add a documented tool attachment frame.
+- [x] Remove obsolete ROS 1-style transmissions from the new simulation path.
+- [x] Check collision geometry, ground clearance, initial self-collisions and
       model anchoring; simplify collision meshes where needed.
-- [ ] Set justified damping/friction values where needed for stable simulation.
-- [ ] Validate Xacro expansion and URDF structure; inspect URDF-to-SDF conversion
+- [x] Set justified damping/friction values where needed for stable simulation.
+- [x] Validate Xacro expansion and URDF structure; inspect URDF-to-SDF conversion
       to ensure all six moving joints survive.
 
 **Gate:** one consistent six-axis model with valid physics properties and a
 collision-free initial pose. Accurate motor/gear dynamics are deferred.
+
+Gate B passes for the bare-arm model. Inertias are numerically/geometrically
+plausible estimates, not measured actuator dynamics. Retained collision meshes
+pass FCL validation; simulator contact performance and gravity-loaded holding
+will be assessed in Gate D.
 
 ## C. Shared controllers and mock execution
 
