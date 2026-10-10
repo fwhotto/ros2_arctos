@@ -37,3 +37,7 @@ install
 log
 
 .catkin_workspace
+
+# Python test artifacts
+__pycache__/
+.pytest_cache/

@@ -17,6 +17,18 @@ hardware validation are subsequent milestones.
 This plan is based on source inspection, not successful builds or runtime tests.
 Validate the environment and current package behavior during implementation.
 
+### Gate A implementation status (2026-10-10)
+
+Gate A dependencies and packaging have been validated on Ubuntu 24.04.5 with
+an isolated Jazzy-only environment and fresh build/install directories: four
+packages built and all 11 pytest cases passed. Gazebo Sim reports 8.15.0.
+This was an underlay-only build on the existing host, not a fresh-container
+installation. See `docs/JAZZY_SETUP.md` and `docs/GATE_A_VALIDATION.md`.
+
+The interface contract is documented in `docs/INTERFACE_CONTRACT.md` as the
+target for later gates. Initial-pose collision validation remains in Gate B;
+the existing robot and runtime launches have not yet been migrated.
+
 ## Architecture
 
 Retain the standard ROS interfaces:
@@ -74,37 +86,44 @@ and MoveIt. Avoid separate launch files silently selecting different models.
 
 Complete this short design step before parallel implementation.
 
-- [ ] Preserve arm joints `X_joint`, `Y_joint`, `Z_joint`, `A_joint`, `B_joint`,
+- [x] Preserve arm joints `X_joint`, `Y_joint`, `Z_joint`, `A_joint`, `B_joint`,
       and `C_joint`.
-- [ ] Use planning group `arm` and controller `arm_controller`.
-- [ ] Expose action `arm_controller/follow_joint_trajectory` relative to the
+- [x] Use planning group `arm` and controller `arm_controller`.
+- [x] Expose action `arm_controller/follow_joint_trajectory` relative to the
       robot namespace.
-- [ ] Use position command interfaces with position and velocity feedback.
-- [ ] Define `world`, `base_link`, and `tool0`, including the tool transform and
+- [x] Use position command interfaces with position and velocity feedback.
+- [x] Define `world`, `base_link`, and `tool0`, including the tool transform and
       axis convention.
-- [ ] Agree on one URDF/SRDF root and Gazebo anchoring arrangement, with a single
+- [x] Agree on one URDF/SRDF root and Gazebo anchoring arrangement, with a single
       authority for each TF transform.
-- [ ] Define backend selection for `mock` and `gazebo`; preserve an extension
+- [x] Define backend selection for `mock` and `gazebo`; preserve an extension
       point for hardware without claiming Jazzy hardware support yet.
 - [ ] Choose one collision-free initial joint configuration, consumed by all
       relevant components.
 - [ ] Make the gripper optional and disabled for the initial milestone.
 
+Checked items above indicate contract decisions, not completed runtime changes.
+Optional gripper implementation and initial-pose validation require Gate B.
+
 ## A. Jazzy environment and dependencies
 
-- [ ] Inspect installed OS, ROS, Gazebo, and workspace overlays; record the
+- [x] Inspect installed OS, ROS, Gazebo, and workspace overlays; record the
       supported environment and avoid mixing ROS distributions.
-- [ ] Establish a reproducible Ubuntu 24.04 / Jazzy / Harmonic build environment.
-- [ ] Declare runtime/build dependencies for Xacro, robot state publisher,
+- [x] Establish a reproducible Ubuntu 24.04 / Jazzy / Harmonic build environment.
+- [x] Declare runtime/build dependencies for Xacro, robot state publisher,
       controller manager, trajectory controller, joint-state broadcaster,
       MoveIt, `ros_gz_sim`, `ros_gz_bridge`, and `gz_ros2_control` in their owning
       packages.
-- [ ] Replace stale Gazebo Classic references in the supported simulation path.
-- [ ] Keep warehouse/database functionality optional for the basic demo.
-- [ ] Provide a documented dependency installation and selective build path
+- [x] Replace stale Gazebo Classic references in the supported simulation path.
+- [x] Keep warehouse/database functionality optional for the basic demo.
+- [x] Provide a documented dependency installation and selective build path
       that does not pull in CAN packages.
-- [ ] Verify package installation rules include all required launch, model,
+- [x] Verify package installation rules include all required launch, model,
       configuration, and world resources.
+
+Current resources are installation-tested. New control and Gazebo packages are
+explicitly scaffolding at this gate; world and simulation launch resources will
+be introduced and covered by the same installation checks in later gates.
 
 **Gate:** dependencies resolve and the simulation package closure builds in a
 clean Jazzy environment. Physical backend migration is not a prerequisite.

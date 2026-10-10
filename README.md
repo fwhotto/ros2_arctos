@@ -1,4 +1,14 @@
 # ROS2 Arctos
+
+## Jazzy / Gazebo development
+
+The Jazzy/Harmonic simulation path is under development. See
+[Jazzy setup and Gate A validation](docs/JAZZY_SETUP.md), the
+[interface contract](docs/INTERFACE_CONTRACT.md), and the
+[implementation plan](IMPLEMENTATION_PLAN.md). Gate A prepares dependencies and
+packaging; a runnable simulation follows in later gates. The instructions below
+describe the existing Humble physical-hardware workflow.
+
 ![Discord](https://img.shields.io/discord/1099629962618748958?logo=discord&logoColor=%23FFFFFF&logoSize=auto)
 
 
