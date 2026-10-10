@@ -33,4 +33,8 @@ non-adjacent self-collision and clears a support surface at world z=0, permittin
 only the mounted base to contact the support.
 
 See [the model review](MODEL_REVIEW.md) for axis/limit decisions, inertia
-provenance, the fixed gripper preview, and the scope of collision validation.
+provenance and the scope of collision validation. The follow-up
+[motion specification review](MOTION_SPECIFICATIONS.md) updates the arm travel
+bounds and adds the actuated gripper to the mock demo. Its `gripper` group uses
+`gripper_controller/follow_joint_trajectory`, commanding `Left_jaw_joint` in
+metres (0 open, 0.015 closed); `Right_jaw_joint` is a mimic follower.

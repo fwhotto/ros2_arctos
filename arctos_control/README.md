@@ -6,6 +6,10 @@ canonical model. `config/ros2_controllers.yaml` defines the position-only
 `arm_controller` and joint state broadcaster. The interactive mock launch is
 `ros2 launch arctos_moveit_config mock_demo.launch.py`.
 
+The mock wrapper enables a gripper by default. `gripper_controller` commands
+`Left_jaw_joint`; the right jaw mimics it without its own command interface.
+Use `include_gripper:=false` on the mock launch to run only the arm.
+
 The contract is documented in `docs/INTERFACE_CONTRACT.md` at repository root.
 This package depends on the robot description and ROS control packages, not
 Gazebo or CAN drivers.

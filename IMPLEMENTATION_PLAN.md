@@ -141,6 +141,13 @@ clean Jazzy environment. Physical backend migration is not a prerequisite.
 
 ## B. Canonical full-arm model and reference comparison
 
+**Follow-up (2026-10-10):** the RViz mock demo now includes an actuated gripper
+and manufacturer Studio-derived arm travel bounds. See
+`docs/MOTION_SPECIFICATIONS.md` for the elbow sign conversion, source provenance
+and 32 passing model/collision tests plus arm/gripper runtime execution checks.
+This brings forward gripper model/mock work; Gazebo contact/grasping and physical
+servo calibration remain later work.
+
 ### Reference repository
 
 Compare against `https://github.com/coen132/Arctos` at inspected commit

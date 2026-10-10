@@ -1,5 +1,9 @@
 # Gate B: canonical Arctos model review
 
+Follow-up: [manufacturer motion specifications](MOTION_SPECIFICATIONS.md) now
+provide the arm travel defaults and actuated gripper convention. The Gate B
+validation report remains a historical record of the bare-arm milestone.
+
 ## Decisions and supported model
 
 The canonical description is the **bare six-axis arm**, without a control
@@ -10,8 +14,8 @@ The three-joint entry point instantiates the same macro with the wrist omitted.
 Parameters:
 
 - `prefix`: applied to all robot link/joint names, excluding the shared `world`.
-- `include_gripper`: false by default; true adds an optional **fixed** gripper
-  preview. Its jaws are locked at the CAD pose, not actuated.
+- `include_gripper`: false by default; true adds the gripper with opposing
+  prismatic jaws and a mimic follower. The mock RViz launch enables it by default.
 - `use_hardware`: false by default; explicit opt-in to the legacy hardware
   adapter. Jazzy hardware execution remains unvalidated.
 
@@ -77,14 +81,16 @@ consume it rather than duplicate numbers.
 
 | Joint | Lower / upper (rad) | Velocity (rad/s) | Effort (N m) |
 | --- | --- | --- | --- |
-| X | `-pi / pi` | 1.4 | 24.3 |
-| Y | `-0.96 / 2.18` | 1.4 | 270 |
-| Z | `-pi/2 / 70*pi/180` | 1.4 | 97 |
+| X | `-200*pi/180 / 200*pi/180` | 1.4 | 24.3 |
+| Y | `-70*pi/180 / 120*pi/180` | 1.4 | 270 |
+| Z | `-110*pi/180 / 40*pi/180` | 1.4 | 97 |
 | A | `-pi / pi` | 4.4 | 22 |
-| B | `-1.55 / 1.55` | 3.0 | 16 |
+| B | `-100*pi/180 / 100*pi/180` | 3.0 | 16 |
 | C | `-pi / pi` | 3.0 | 16 |
 
-Travel/effort values retain the existing full-arm description. X velocity uses
+Travel now follows manufacturer Studio software defaults with the local elbow
+sign conversion; see the follow-up review. Effort values remain estimates from
+the existing full-arm description. X velocity uses
 the conservative existing reduced-model value of 1.4 rather than 15 rad/s.
 These are project estimates, not newly measured actuator specifications.
 Planner acceleration limits and controller settings are later-gate work.
@@ -134,14 +140,14 @@ The tensor is already about the COM with the same axis orientation, so it does
 not require a parallel-axis shift. This reference-derived estimate should be
 replaced if measured/CAD-material properties become available.
 
-### Optional gripper preview
+### Optional gripper
 
 The gripper body retains its local estimate. Both jaws now have nonzero
 reference-derived mass/tensors and translated COMs, using the same formula.
-All preview joints are fixed; enabling it still produces exactly six moving
-arm joints. Gripper collision/contact behavior and actuation are not included
-in Gate B's bare-arm collision-free claim. The reference's opposing jaw axes
-remain useful for the later gripper milestone.
+The follow-up now adds opposing jaw axes, a mimic relation and mock actuation,
+with tests for both open/closed poses and intermediate openings. This adds one
+independent DOF to the six-axis arm. Gazebo contact and physical servo behavior
+remain unvalidated; see the follow-up review for limits and source provenance.
 
 ## Collision, support and dynamics
 

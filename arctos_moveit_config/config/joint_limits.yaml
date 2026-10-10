@@ -3,6 +3,8 @@
 default_velocity_scaling_factor: 0.1
 default_acceleration_scaling_factor: 0.1
 joint_limits:
+  Left_jaw_joint: {has_acceleration_limits: true, max_acceleration: 0.05}
+  Right_jaw_joint: {has_acceleration_limits: true, max_acceleration: 0.05}
   X_joint: {has_acceleration_limits: true, max_acceleration: 1.0}
   Y_joint: {has_acceleration_limits: true, max_acceleration: 1.0}
   Z_joint: {has_acceleration_limits: true, max_acceleration: 1.0}

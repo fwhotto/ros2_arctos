@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot name="arctos" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="include_gripper" default="true" />
+  <xacro:include filename="$(find arctos_moveit_config)/config/arctos.srdf" />
+  <xacro:if value="$(arg include_gripper)">
+    <group name="gripper">
+      <link name="Gripper_1" />
+      <joint name="Left_jaw_joint" />
+      <joint name="Right_jaw_joint" />
+    </group>
+    <end_effector name="gripper" parent_link="tool0" group="gripper" parent_group="arm" />
+    <group_state name="open" group="gripper">
+      <joint name="Left_jaw_joint" value="0" />
+    </group_state>
+    <group_state name="closed" group="gripper">
+      <joint name="Left_jaw_joint" value="0.015" />
+    </group_state>
+    <!-- Rigid wrist mount and the sliding jaw/body contacts are intentional. -->
+    <disable_collisions link1="Link_6_1" link2="Gripper_1" reason="Adjacent" />
+    <disable_collisions link1="Gripper_1" link2="Left_jaw_1" reason="Adjacent" />
+    <disable_collisions link1="Gripper_1" link2="Right_jaw_1" reason="Adjacent" />
+    <!-- Pads meet at closed; jaw travel is bounded to prevent crossing. -->
+    <disable_collisions link1="Left_jaw_1" link2="Right_jaw_1" reason="Touch" />
+  </xacro:if>
+</robot>

@@ -16,10 +16,11 @@ ros2 launch arctos_moveit_config mock_demo.launch.py
 ```
 
 This starts RViz, MoveIt with OMPL/KDL, robot_state_publisher, and ros2_control
-with `mock_components/GenericSystem`. The six-axis bare arm starts at the shared
+with `mock_components/GenericSystem`. The six-axis arm and gripper start at the shared
 initial pose. `arm_controller` executes position trajectories and the joint
 state broadcaster updates the displayed robot. No Gazebo or physical hardware
-driver is started. All nodes use wall time.
+driver is started. All nodes use wall time. The gripper starts open. To use the
+bare arm, add `include_gripper:=false` to the launch command.
 
 ### Try a motion
 
@@ -30,6 +31,12 @@ driver is started. All nodes use wall time.
 4. Click **Plan** to see the animated trajectory preview.
 5. Click **Execute** to move the mock robot, or use **Plan & Execute**.
 6. Select **home** as the goal and repeat to return.
+
+To operate the gripper, switch the planning group to **gripper**, select goal
+**closed** or **open**, and click **Plan & Execute**. The two jaws move together;
+the command represents each jaw's closing travel, not total opening width.
+Switch back to **arm** for tool-marker planning. The 30 mm opening and updated
+arm travel are documented in [motion specifications](../docs/MOTION_SPECIFICATIONS.md).
 
 You can also enable **Query Goal State** under the MotionPlanning display's
 **Planning Request** properties and drag the tool's interactive marker. Use the
@@ -56,13 +63,14 @@ export ROS_DOMAIN_ID=81
 python3 scripts/test_mock_moveit.py
 ```
 
-This sends real MoveIt planning requests and executes `demo` then `home`, checking
-action success and final `/joint_states` feedback. Use this domain only for the
-mock stack. Stop the launch with Ctrl+C when finished.
+This sends real MoveIt planning requests and executes arm `demo`, gripper
+`closed`, gripper `open`, then arm `home`, checking action success and final
+`/joint_states` feedback, including the mimic jaw. For a launch with
+`include_gripper:=false`, pass `--bare` to the script. Use this domain only for
+the mock stack. Stop the launch with Ctrl+C when finished.
 
-Validated on 2026-10-10: fresh Jazzy build, all 27 existing pytest cases passing,
-and both end-to-end plan/execute requests successful. Evidence is in
-`/tmp/opencode/arctos-moveit-mock/runtime.log`. The RViz window was not visually
+Validated on 2026-10-10: fresh Jazzy build, model/collision tests, and end-to-end
+arm/gripper planning and execution (also the bare-arm variant). The RViz window was not visually
 verified because the validation session had no graphical display.
 
 Use `mock_demo.launch.py` for this workflow; older generated launch files are

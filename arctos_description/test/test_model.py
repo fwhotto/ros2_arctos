@@ -37,7 +37,7 @@ def vertices(mesh):
 
 @pytest.mark.parametrize("options,expected", [
     ({}, JOINTS),
-    ({"include_gripper": "true"}, JOINTS),
+    ({"include_gripper": "true"}, JOINTS + ["Left_jaw_joint", "Right_jaw_joint"]),
     ({"prefix": "test_"}, ["test_" + joint for joint in JOINTS]),
 ])
 def test_description_structure_and_urdf_parser(tmp_path, options, expected):
@@ -143,6 +143,20 @@ def test_zero_pose_matches_cad_assembly_and_clears_ground():
             assert minimum_z == pytest.approx(0.0, abs=1e-7)
         else:
             assert minimum_z > 0.1, link.get("name")
+
+
+def test_gripper_pad_gap_matches_manufacturer_stroke():
+    robot = expand(include_gripper="true")
+    pads = []
+    for name in ("Left_jaw_1", "Right_jaw_1"):
+        visual = robot.find(f"link[@name='{name}']/visual")
+        points = vertices(visual.find("geometry/mesh"))
+        # Distal gripping pads, away from the overlapping rack/body geometry.
+        pads.append(points[points[:, 1] < -0.39])
+    gap = pads[0][:, 2].min() - pads[1][:, 2].max()
+    assert gap == pytest.approx(0.03, abs=1e-6)
+    stroke = float(robot.find("joint[@name='Left_jaw_joint']/limit").get("upper"))
+    assert gap - 2 * stroke == pytest.approx(0, abs=1e-6)
 
 
 @pytest.mark.parametrize("filename", ["arctos.xacro", "base_xyz/arctos.xacro"])

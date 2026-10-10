@@ -5,6 +5,17 @@ controller_manager:
       type: joint_state_broadcaster/JointStateBroadcaster
     arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
+    gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+gripper_controller:
+  ros__parameters:
+    joints: [Left_jaw_joint]
+    command_interfaces: [position]
+    state_interfaces: [position, velocity]
+    constraints:
+      goal_time: 1.0
+      stopped_velocity_tolerance: 0.001
 
 arm_controller:
   ros__parameters:

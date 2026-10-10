@@ -1,9 +1,11 @@
 # Canonical simulation bounds, in radians, rad/s and N m.
-# See docs/MODEL_REVIEW.md for provenance and unresolved physical calibration.
+# Travel: manufacturer Studio Web defaults, reviewed 2026-10-10.
+# Z is sign-converted from the manufacturer's -X axis to our +X axis.
+# See docs/MOTION_SPECIFICATIONS.md; effort/velocity remain simulation estimates.
 # X velocity uses the conservative existing reduced-model value (not 15 rad/s).
-X_joint: {lower: -3.141592653589793, upper: 3.141592653589793, effort: 24.3, velocity: 1.4}
-Y_joint: {lower: -0.96, upper: 2.18, effort: 270.0, velocity: 1.4}
-Z_joint: {lower: -1.5707963267948966, upper: 1.2217304763960306, effort: 97.0, velocity: 1.4}
+X_joint: {lower: -3.490658503988659, upper: 3.490658503988659, effort: 24.3, velocity: 1.4}
+Y_joint: {lower: -1.2217304763960306, upper: 2.0943951023931953, effort: 270.0, velocity: 1.4}
+Z_joint: {lower: -1.9198621771937625, upper: 0.6981317007977318, effort: 97.0, velocity: 1.4}
 A_joint: {lower: -3.141592653589793, upper: 3.141592653589793, effort: 22.0, velocity: 4.4}
-B_joint: {lower: -1.55, upper: 1.55, effort: 16.0, velocity: 3.0}
+B_joint: {lower: -1.7453292519943295, upper: 1.7453292519943295, effort: 16.0, velocity: 3.0}
 C_joint: {lower: -3.141592653589793, upper: 3.141592653589793, effort: 16.0, velocity: 3.0}

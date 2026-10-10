@@ -20,7 +20,8 @@ it accepts `prefix`, `include_wrist` and `include_gripper`.
 Entry-point arguments:
 
 - `prefix:=left_`: prefix robot links and joints (world stays shared).
-- `include_gripper:=true`: fixed, unactuated gripper preview.
+- `include_gripper:=true`: 15 mm opposing prismatic jaws, one independent joint
+  and a mimic follower. The RViz mock demo adds the controller.
 - `use_hardware:=true`: explicit legacy hardware-plugin opt-in; physical Jazzy
   operation is not validated.
 

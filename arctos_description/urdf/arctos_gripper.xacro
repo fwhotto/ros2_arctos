@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <!-- Optional fixed attachment for visualization. Gripper actuation/contact
-       validation is a later milestone; jaws are locked at their CAD pose. -->
+  <!-- Manufacturer ROS geometry: CAD pose is open; each jaw closes 15 mm.
+       Right jaw mimics the left along the opposing axis. Units are metres.
+       Velocity/effort are simulation estimates, not servo specifications. -->
   <xacro:macro name="arctos_gripper" params="prefix:=''">
     <xacro:arctos_link name="Gripper_1" prefix="${prefix}"
       origin_xyz="0 0.323 -0.5685" origin_rpy="0 0 0" material_name="white"
@@ -21,11 +22,18 @@
     <joint name="${prefix}Gripper_joint" type="fixed">
       <parent link="${prefix}tool0" /><child link="${prefix}Gripper_1" />
     </joint>
-    <joint name="${prefix}Left_jaw_joint" type="fixed">
+    <joint name="${prefix}Left_jaw_joint" type="prismatic">
       <parent link="${prefix}Gripper_1" /><child link="${prefix}Left_jaw_1" />
+      <axis xyz="0 0 -1" />
+      <limit lower="0" upper="0.015" velocity="0.02" effort="20" />
+      <dynamics damping="0.1" friction="0" />
     </joint>
-    <joint name="${prefix}Right_jaw_joint" type="fixed">
+    <joint name="${prefix}Right_jaw_joint" type="prismatic">
       <parent link="${prefix}Gripper_1" /><child link="${prefix}Right_jaw_1" />
+      <axis xyz="0 0 1" />
+      <limit lower="0" upper="0.015" velocity="0.02" effort="20" />
+      <mimic joint="${prefix}Left_jaw_joint" multiplier="1" offset="0" />
+      <dynamics damping="0.1" friction="0" />
     </joint>
   </xacro:macro>
 </robot>

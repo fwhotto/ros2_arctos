@@ -59,7 +59,7 @@ Tests cover:
 - All current model, mesh, launch and configuration resources are installed
   with matching contents; the same check covers future world files.
 - URDF parsing, shared reduced/full geometry, prefixes, backend-independent
-  model expansion and optional fixed gripper attachment.
+  model expansion and optional mimic-jaw gripper attachment.
 - Physical bounds, inertial plausibility, CAD assembly alignment and clearance.
 - SDF articulation/anchoring and tool frame preservation.
 - Actual MoveIt/FCL self-collision/support tests, with obstructed and folded
