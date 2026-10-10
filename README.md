@@ -10,6 +10,10 @@ packaging and the [validated bare-arm model](docs/MODEL_REVIEW.md); a runnable
 simulation follows in later gates. The instructions below
 describe the existing Humble physical-hardware workflow.
 
+For interactive motion planning before Gazebo, see the
+[RViz + MoveIt mock demo](arctos_moveit_config/README.md):
+`ros2 launch arctos_moveit_config mock_demo.launch.py`.
+
 ![Discord](https://img.shields.io/discord/1099629962618748958?logo=discord&logoColor=%23FFFFFF&logoSize=auto)
 
 

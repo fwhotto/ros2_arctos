@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<robot name="arctos" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find arctos_description)/urdf/arctos.xacro" />
+  <xacro:property name="initial" value="${xacro.load_yaml('$(find arctos_control)/config/initial_positions.yaml')['initial_positions']}" />
+  <xacro:macro name="mock_joint" params="name">
+    <joint name="${name}">
+      <command_interface name="position">
+        <param name="min">${arctos_joint_limits[name]['lower']}</param>
+        <param name="max">${arctos_joint_limits[name]['upper']}</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">${initial[name]}</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+  </xacro:macro>
+  <ros2_control name="ArctosMock" type="system">
+    <hardware><plugin>mock_components/GenericSystem</plugin></hardware>
+    <xacro:mock_joint name="X_joint" />
+    <xacro:mock_joint name="Y_joint" />
+    <xacro:mock_joint name="Z_joint" />
+    <xacro:mock_joint name="A_joint" />
+    <xacro:mock_joint name="B_joint" />
+    <xacro:mock_joint name="C_joint" />
+  </ros2_control>
+</robot>
