@@ -217,6 +217,15 @@ will be assessed in Gate D.
 
 ## D. Gazebo integration
 
+**2026-10-16 checkpoint:** `arctos_gazebo/demo.launch.py` now runs Harmonic with
+Bullet Featherstone, the shared arm/gripper interfaces, simulated clock, world
+anchor and a planning-scene ground. Fresh build/model checks and headless
+arm/gripper execution plus five-second hold checks pass for gripper and bare-arm
+variants. See `docs/GAZEBO_VALIDATION.md`. Visual user acceptance is pending;
+object-contact/grasping and calibrated actuator dynamics remain subsequent work.
+The latest documented closed-loop baseline and collaborator adaptations are in
+`docs/CLOSED_LOOP_BASELINE.md`.
+
 - [ ] Introduce `arctos_gazebo` and a minimal world with ground/support geometry.
 - [ ] Add the `gz_ros2_control/GazeboSimSystem` hardware backend and Gazebo system
       plugin, loading the shared controller configuration.
