@@ -217,6 +217,14 @@ will be assessed in Gate D.
 
 ## D. Gazebo integration
 
+**2026-10-22 grasp follow-up:** shared pad/rail collision geometry now supports
+open-jaw insertion and physical contact/friction lifting of the default cube.
+Headless close → 60 mm lift → three-second hold → set-down → release → retreat
+passes twice, with planning attachment ownership paused/resumed correctly.
+Fresh model tests and approach/free-space regressions pass. Visual user
+acceptance and physical kit force/stroke calibration remain outstanding; see
+`docs/GAZEBO_VALIDATION.md` and the Gazebo README's physical grasp checkpoint.
+
 **2026-10-22 follow-up:** configurable table/cube scene and a contact-free
 pre-grasp approach are implemented. Headless settling, scene synchronization,
 collision rejection and executed approach checks pass; visual acceptance is

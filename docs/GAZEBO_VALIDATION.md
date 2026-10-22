@@ -1,6 +1,45 @@
 # Gazebo integration validation — 2026-10-16
 
+## Physical grasp follow-up — 2026-10-22
+
+The earlier jaw-insertion blocker is resolved for the default cube by replacing
+each jaw's convexified mesh collision with separate pad/rail boxes in the shared
+URDF. MoveIt and Gazebo now check the same simplified surfaces. Visual meshes
+and inertias are unchanged. `grasp_frame` moves to the pad centre, y = −66 mm
+in `tool0` (previously the −74 mm distal tip).
+
+Fresh build: four packages; **39 pytest cases** (45 including six CTest wrappers),
+zero errors/failures/skips. The added positive/negative collision test verifies
+that a 20 mm cube fits between open pads and intersects closing pads.
+
+Two headless grasp runs passed, with the final control/approach regression checks:
+
+- Open-jaw insertion to cube centre without displacement.
+- Closing, then a collision-checked 60 mm vertical lift.
+- Fresh independent Gazebo cube positions stay within 5 mm of the lifted target
+  for three seconds. No physics attachment, teleport or fixed joint is used.
+- Set-down, opening and retreat; cube returns within 3 mm of its settled pose,
+  both jaws are open, and MoveIt has a synchronized world cube with no leftover
+  attached object.
+- Original approach-only scene check and empty-world arm/gripper motions plus
+  five-second hold checks still pass.
+
+Evidence: `/tmp/opencode/arctos-grasp-final` and `/tmp/opencode/arctos-grasp-repeat`;
+fresh build transcript: `/tmp/opencode/arctos-grasp-build.log`. All validation
+launches were stopped. MoveIt attachment is planning-only: the cube pose updater
+pauses during attachment and resumes after release.
+
+**User checkpoint pending:** observe insertion, physical lift/hold, and release
+in Gazebo/RViz using `python3 scripts/test_manipulation.py --execute --grasp`
+against a fresh manipulation launch. This is a slow vertical lift of the default
+20 g cube, not validation of arbitrary payloads, dynamic grasps or hardware
+forces. Pad dimensions, friction and 0.5 mm positional squeeze are simulation
+estimates. The simulation script must not be used on the physical robot.
+
 ## Manipulation-scene follow-up — 2026-10-22
+
+Historical approach-only checkpoint; the physical grasp follow-up above
+supersedes its jaw-insertion acceptance boundary.
 
 Implemented a configurable static table and dynamic 20 mm / 20 g cube, a
 mesh-derived distal `grasp_frame`, and explicit Gazebo-to-MoveIt cube pose

@@ -52,6 +52,6 @@ def test_grasp_frame_matches_approach_transform():
     joint = robot.find("joint[@name='grasp_frame_joint']")
     assert joint.find("parent").get("link") == "tool0"
     np.testing.assert_allclose(np.fromstring(joint.find("origin").get("xyz"), sep=" "),
-                               [-0.00129, -0.074, 0.001367])
+                               [-0.00129, -0.066, 0.001367])
     np.testing.assert_allclose(np.fromstring(joint.find("origin").get("rpy"), sep=" "),
                                [np.pi/2, 0, 0])

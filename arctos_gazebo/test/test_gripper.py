@@ -10,6 +10,9 @@ from moveit.core.robot_model import RobotModel
 import numpy as np
 import pytest
 import xacro
+from geometry_msgs.msg import Pose
+from moveit_msgs.msg import CollisionObject
+from shape_msgs.msg import SolidPrimitive
 
 
 @pytest.fixture(scope="module")
@@ -64,3 +67,32 @@ def test_manufacturer_travel_with_elbow_sign_conversion(model):
         limit = urdf.find(f"joint[@name='{axis}_joint']/limit")
         np.testing.assert_allclose(np.rad2deg([float(limit.get("lower")), float(limit.get("upper"))]),
                                    bounds, atol=1e-8)
+
+
+def test_cube_fits_open_pads_but_contacts_closed_pads(model):
+    robot, urdf, _ = model
+    scene = PlanningScene(robot)
+    state = scene.current_state
+    state.set_to_default_values()
+    state.update()
+    center = state.get_global_link_transform("grasp_frame")[:3, 3]
+    cube = CollisionObject(id="cube", operation=CollisionObject.ADD)
+    cube.header.frame_id = "world"
+    cube.primitives = [SolidPrimitive(type=SolidPrimitive.BOX, dimensions=[0.02]*3)]
+    pose = Pose()
+    pose.position.x, pose.position.y, pose.position.z = center
+    pose.orientation.w = 1.0
+    cube.primitive_poses = [pose]
+    scene.apply_collision_object(cube)
+    result = CollisionResult()
+    scene.check_collision(CollisionRequest(), result, state)
+    assert not result.collision
+    state.joint_positions = {"Left_jaw_joint": 0.0075}
+    state.update()
+    result = CollisionResult()
+    scene.check_collision(CollisionRequest(), result, state)
+    assert result.collision
+    for name in ("Left_jaw_1", "Right_jaw_1"):
+        link = urdf.find(f"link[@name='{name}']")
+        assert {c.get("name") for c in link.findall("collision")} == {"pad", "rail"}
+        assert all(c.find("geometry/mesh") is None for c in link.findall("collision"))

@@ -7,5 +7,5 @@ cube:
   position: [0.0, -0.38, 0.261]
   mass: 0.02
 approach_clearance: 0.06
-# Pause above the cube until conservative jaw contact geometry is refined.
+# Contact-free approach checkpoint; --grasp descends to the cube centre instead.
 surface_clearance: 0.005

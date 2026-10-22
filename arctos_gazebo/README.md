@@ -107,7 +107,8 @@ and settles under gravity. The table and cube share one configuration:
 The table is mirrored into MoveIt from configuration; the cube's measured
 Gazebo world pose (`/cube/pose`) updates its MoveIt collision object at 5 Hz.
 This is an explicit object synchronizer, not automatic scene discovery or a TF
-broadcaster. It must change when attached-object/grasp ownership is introduced.
+broadcaster. During the grasp cycle it is paused while MoveIt owns an attached
+cube, then resumed after detachment to follow the released cube again.
 
 ### User checkpoints
 
@@ -134,19 +135,17 @@ broadcaster. It must change when attached-object/grasp ownership is introduced.
    leaves the arm at that endpoint. Relaunch to repeat from the initial pose.
 
 The pre-grasp frame starts 60 mm above the cube centre; `approach_clearance`
-and `surface_clearance` are configurable. The mesh-derived `grasp_frame` is at
-the distal jaw-pad midpoint, 74 mm along −Y from `tool0`, with local +Z pointing
+and `surface_clearance` are configurable. The provisional `grasp_frame` is at
+the collision-pad midpoint, 66 mm along −Y from `tool0`, with local +Z pointing
 out of the fingers. It is provisional until checked against the actual kit.
 The approach uses `tool0` Cartesian waypoints transformed to that frame,
 because the KDL chain is configured with `tool0` as its solver tip.
 During pre-grasp transit a path constraint keeps `tool0` at least 100 mm above
 the tabletop, avoiding low sweeping motions before the straight approach.
 
-**Scope limit:** insertion around the cube is not accepted yet. The conservative
-convex jaw collision shapes in Gazebo can contact a 20 mm cube before MoveIt's
-mesh geometry predicts contact. The checkpoint therefore stops above it rather
-than allowing contacts or relaxing validation tolerances. Closing, attachment,
-lifting and release are not implemented here.
+The approach-only checkpoint still stops above the cube. The optional grasp
+cycle below now inserts the open jaws using shared box-pad collision geometry
+instead of the earlier overly conservative convex jaw meshes.
 
 For an isolated automated execution/cleanup:
 
@@ -158,6 +157,60 @@ It checks a settled cube against Gazebo feedback, planning-scene geometry,
 pre-grasp execution, table collision rejection, a complete Cartesian approach,
 executed position/orientation, open jaws and an undisturbed cube. Logs are
 `manipulation-launch.log` and `manipulation-checks.log` in the output directory.
+
+## Physical cube grasp checkpoint
+
+Start a fresh manipulation launch (no automatic motion), then in another sourced
+terminal, from the repository root:
+
+```bash
+python3 scripts/test_manipulation.py --execute --grasp
+```
+
+The sequence approaches above the cube, lowers the open fingers around it,
+closes, lifts **60 mm**, holds for **three seconds**, lowers back to the table,
+opens, and retreats upward. Please confirm:
+
+1. Both jaws surround the cube without pushing it during insertion.
+2. The cube follows the jaws upward and stays held during the pause.
+3. After opening and retreat, the cube stays on the table in both windows.
+
+The cube is held by simulated **contact and friction**. No Gazebo fixed joint,
+teleport or attachment plugin is used. MoveIt attaches its collision object to
+`grasp_frame` only for carried-object planning, with the two jaw links as touch
+links. `/manipulation/pause_cube_sync` (`std_srvs/SetBool`) prevents world-object
+updates from competing with attachment ownership; the script restores measured
+world updates after release. Do not run two manipulation scripts concurrently.
+
+For reproducible headless testing with automatic launch/cleanup:
+
+```bash
+python3 scripts/validate_gazebo.py --scene --grasp
+```
+
+Logs are `grasp-launch.log` and `grasp-checks.log`. Beyond the approach checks,
+the test verifies cube position throughout the lifted hold (within 5 mm), open
+jaws after release, cube return within 3 mm, and restoration of MoveIt's world
+object with no leftover attached cube. This is tested for the default scene;
+other sizes/poses may need clearance, closing-travel and planning adjustments.
+If the script fails after attachment, it does **not** automatically open the
+jaws or attempt recovery. Inspect the logged failure and restart the simulation.
+
+### Collision and contact assumptions
+
+Each jaw now uses two explicit boxes, a pad and a proximal rail, in **both**
+MoveIt and Gazebo; the visual meshes and inertias remain unchanged. Pads are
+18×16×8 mm, centred at y = −66 mm with a 30 mm initial opening. Jaw friction
+coefficients are set to 1.0. These are simplified simulation contact surfaces,
+not measured kit dimensions, rubber friction or servo force ratings. The frame
+is at the pad centre rather than the earlier distal mesh tip.
+
+For the 20 mm cube, each jaw is commanded 5.5 mm inward: 5 mm nominal contact
+plus 0.5 mm positional squeeze. The two-second closing trajectory and idealized
+position control are not force control. Do not use this script on the physical
+robot; real hardware needs calibrated stroke and appropriate force/current or
+stall handling. The physical grasp is validated only for this light cube and
+slow vertical lift, not arbitrary objects, lateral accelerations or payloads.
 
 ## Physics details
 
@@ -171,7 +224,7 @@ an infinite plane at the same height.
 Position control approximates closed-loop output-joint tracking. It does not
 reproduce MKS encoder quantization, gearbox compliance, torque response or CAN
 latency. Gripper planning bounds alone have a 1 µm endpoint allowance for
-physics round-off; URDF/control travel remains 0–15 mm. Mesh self-contact,
-grasp friction and payload handling are not validated by these free-space tests.
+physics round-off; URDF/control travel remains 0–15 mm. Arbitrary self-contact,
+real actuator forces and hardware payload capacity are not validated here.
 
 Evidence and remaining checkpoints: [Gazebo validation](../docs/GAZEBO_VALIDATION.md).

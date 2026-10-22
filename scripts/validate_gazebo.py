@@ -17,9 +17,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bare", action="store_true")
     parser.add_argument("--scene", action="store_true", help="Validate table/cube and execute the approach")
+    parser.add_argument("--grasp", action="store_true", help="With --scene, validate a physical lift/release")
     parser.add_argument("--domain", type=int, default=86)
     parser.add_argument("--output", default="/tmp/opencode/arctos-gazebo-runtime")
     args = parser.parse_args()
+    if args.grasp and not args.scene:
+        parser.error("--grasp requires --scene")
     if args.scene and args.bare:
         parser.error("The approach checkpoint requires the gripper")
     directory = Path(args.output)
@@ -27,7 +30,7 @@ def main():
     name = "bare" if args.bare else "gripper"
     scene_args = []
     if args.scene:
-        name = "manipulation"
+        name = "grasp" if args.grasp else "manipulation"
         scene_args = ["scene_config:=" + str(Path(get_package_share_directory("arctos_gazebo")) / "config/manipulation.yaml")]
     env = dict(os.environ, ROS_DOMAIN_ID=str(args.domain),
                GZ_PARTITION=f"arctos-check-{uuid.uuid4().hex}")
@@ -44,6 +47,8 @@ def main():
             ] + (["--bare"] if args.bare else [])
             if args.scene:
                 command = ["python3", str(Path(__file__).with_name("test_manipulation.py")), "--execute"]
+                if args.grasp:
+                    command.append("--grasp")
             result = subprocess.run(command, env=env, timeout=240,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             (directory / f"{name}-checks.log").write_text(result.stdout)

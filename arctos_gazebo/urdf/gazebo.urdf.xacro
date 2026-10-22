@@ -2,6 +2,10 @@
 <robot name="arctos" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:arg name="hardware_plugin" default="gz_ros2_control/GazeboSimSystem" />
   <xacro:include filename="$(find arctos_control)/urdf/controlled.urdf.xacro" />
+  <xacro:if value="$(arg include_gripper)">
+    <gazebo reference="Left_jaw_1"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+    <gazebo reference="Right_jaw_1"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+  </xacro:if>
   <gazebo>
     <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
       <topic>/arctos/sim_joint_states</topic>

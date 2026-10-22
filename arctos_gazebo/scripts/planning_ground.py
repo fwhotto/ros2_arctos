@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Mirror ground/table and the live Gazebo cube in MoveIt's collision world.
 
-Cube updates are for this pre-contact checkpoint only; pause/remove this
-updater before implementing MoveIt attached-object ownership during grasping.
+The grasp script pauses cube updates while MoveIt owns attached geometry and
+resumes them after detachment. This never attaches the cube in Gazebo.
 """
 
 from geometry_msgs.msg import Pose
@@ -14,6 +14,7 @@ from shape_msgs.msg import SolidPrimitive
 from tf2_msgs.msg import TFMessage
 from scene_objects import load_scene
 import time
+from std_srvs.srv import SetBool
 
 
 def main():
@@ -22,6 +23,15 @@ def main():
     path = node.declare_parameter("scene_config", "").value
     config = load_scene(path) if path else None
     latest = {}
+    paused = False
+    def pause_sync(request, response):
+        nonlocal paused
+        paused = request.data
+        response.success = True
+        response.message = "Cube synchronization paused" if paused else "Cube synchronization resumed"
+        return response
+    if config:
+        node.create_service(SetBool, "/manipulation/pause_cube_sync", pause_sync)
     def receive(msg):
         for transform in msg.transforms:
             if transform.child_frame_id == "cube":
@@ -68,6 +78,8 @@ def main():
                     continue
                 if time.monotonic() - latest["time"] > 2:
                     raise RuntimeError("Gazebo cube pose stream became stale")
+                if paused:
+                    continue
                 cube = CollisionObject(id="cube", operation=CollisionObject.ADD)
                 cube.header.frame_id = "world"
                 cube.primitives = [SolidPrimitive(type=SolidPrimitive.BOX, dimensions=config["cube"]["size"])]
