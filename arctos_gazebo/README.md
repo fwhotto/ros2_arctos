@@ -297,3 +297,10 @@ physics round-off; URDF/control travel remains 0–15 mm. Arbitrary self-contact
 real actuator forces and hardware payload capacity are not validated here.
 
 Evidence and remaining checkpoints: [Gazebo validation](../docs/GAZEBO_VALIDATION.md).
+
+## Voron V0.2 printer model
+
+`models/voron_v02` and `worlds/voron_printer.sdf` add a Voron V0.2 with a
+passive hinged door for printer tending. Generate its meshes before building
+and set `GZ_SIM_RESOURCE_PATH`; see [the model notes](../docs/VORON_SIM_MODEL.md).
+The arm is not yet placed in that world.

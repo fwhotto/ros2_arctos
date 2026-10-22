@@ -1,0 +1,19 @@
+Voron V0.2 printer model
+========================
+
+The visual meshes in meshes/ are derived from the Voron V0.2R1 Master Assembly
+STEP published by the Voron Design team:
+
+  https://github.com/VoronDesign/Voron-0
+  commit a53fc87562fd630c846af38d7de850c894dc3d85
+  V0.2R1 Master Assembly v63.step
+  sha256 d5a9d40db82c55eee20203608a5a4e784b54b87ae339861af577c5aeb182d61f
+
+That source is licensed under the GNU General Public License v3.0. The derived
+meshes remain under GPL-3.0; they are NOT covered by this repository's
+Apache-2.0 licence. They are not committed: scripts/build_voron_sdf.py
+regenerates them locally from the hash-verified upstream file, whose LICENSE is
+downloaded alongside it by scripts/inspect_voron_cad.py --fetch-only.
+
+model.sdf records dimensions and poses measured from that CAD (see
+docs/VORON_MEASUREMENTS.md and docs/VORON_SIM_MODEL.md).

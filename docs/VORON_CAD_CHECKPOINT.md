@@ -98,3 +98,10 @@ python3 scripts/test_inspect_voron_cad.py
 Offline tests cover checksum rejection without overwriting changed files,
 exact-member archive extraction and reuse without network access. They do not
 test CAD import, mesh export or Gazebo physics.
+
+## Local measurement checkpoint
+
+Measured selectors, hinge axis, door limits, handle, opening and bed datum are
+in `VORON_MEASUREMENTS.md`. `scripts/voron_review_split.py` exports the proposed
+component split as a review STEP outside the repository. Approval is still
+required before simulator geometry.

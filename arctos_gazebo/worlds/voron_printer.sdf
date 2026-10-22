@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<!--
+  Printer-only checkpoint world: the Voron V0.2 model plus a loose test cube on
+  its bed. No robot. Physics, plugins, light and ground match empty.sdf.
+  Requires GZ_SIM_RESOURCE_PATH to include arctos_gazebo/models (see
+  docs/VORON_SIM_MODEL.md). Units: m, kg, rad.
+  Cube: 20 mm, 20 g test fixture (handoff assumption), 1 mm above the bed surface.
+-->
+<sdf version="1.9">
+  <world name="voron_printer">
+    <physics name="physics" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <gravity>0 0 -9.81</gravity>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics">
+      <engine><filename>gz-physics-bullet-featherstone-plugin</filename></engine>
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <light name="sun" type="directional">
+      <pose relative_to="world">0 0 10 0 0 0</pose><diffuse>0.8 0.8 0.8 1</diffuse>
+      <direction>-0.5 0.1 -0.9</direction><cast_shadows>true</cast_shadows>
+    </light>
+    <model name="ground">
+      <pose relative_to="world">0 0 -0.001 0 0 0</pose>
+      <static>true</static>
+      <link name="ground">
+        <collision name="ground"><geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry></collision>
+        <visual name="ground"><geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry></visual>
+      </link>
+    </model>
+    <include>
+      <uri>model://voron_v02</uri>
+      <name>voron</name>
+      <pose relative_to="world">0 0 0 0 0 0</pose>
+    </include>
+    <model name="cube">
+      <!-- voron::bed_surface in world (chassis z 0.00207 + frame 0.000004 -0.03185 0.10895)
+           + half cube height 0.010 + 0.001 m drop gap; checked by test/test_voron_model.py -->
+      <pose relative_to="world">0.000004 -0.03185 0.12202 0 0 0</pose>
+      <link name="body">
+        <inertial>
+          <mass>0.02</mass>
+          <!-- solid cube a = 0.02 m: I = m a^2 / 6 -->
+          <inertia><ixx>1.33333e-06</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1.33333e-06</iyy><iyz>0</iyz><izz>1.33333e-06</izz></inertia>
+        </inertial>
+        <collision name="cube">
+          <geometry><box><size>0.02 0.02 0.02</size></box></geometry>
+          <surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface>
+        </collision>
+        <visual name="cube">
+          <geometry><box><size>0.02 0.02 0.02</size></box></geometry>
+          <material><ambient>0.8 0.1 0.1 1</ambient><diffuse>0.8 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
