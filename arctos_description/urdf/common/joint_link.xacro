@@ -6,7 +6,7 @@
 
   <!-- Define arctos_link macro -->
   <xacro:macro name="arctos_link"
-    params="name origin_xyz origin_rpy material_name inertia_origin_xyz inertia_origin_rpy mass ixx iyy izz ixy iyz ixz prefix:=''">
+    params="name origin_xyz origin_rpy material_name inertia_origin_xyz inertia_origin_rpy mass ixx iyy izz ixy iyz ixz prefix:='' collision_mode:='mesh' pad_z:=0">
     <link name="${prefix}${name}">
       <visual>
         <origin xyz="${origin_xyz}" rpy="${origin_rpy}" />
@@ -15,12 +15,26 @@
         </geometry>
         <material name="${material_name}" />
       </visual>
+      <xacro:if value="${collision_mode == 'mesh'}">
       <collision>
         <origin xyz="${origin_xyz}" rpy="${origin_rpy}" />
         <geometry>
           <mesh filename="package://arctos_description/meshes/${name}.stl" scale="0.001 0.001 0.001" />
         </geometry>
       </collision>
+      </xacro:if>
+      <xacro:if value="${collision_mode == 'jaw'}">
+        <!-- Separate pad and proximal rail avoid a convex mesh hull spanning
+             the finger opening. Shared by MoveIt and Gazebo. -->
+        <collision name="pad">
+          <origin xyz="-0.00129 -0.066 ${pad_z}" rpy="0 0 0" />
+          <geometry><box size="0.018 0.016 0.008" /></geometry>
+        </collision>
+        <collision name="rail">
+          <origin xyz="-0.00129 -0.043 ${pad_z}" rpy="0 0 0" />
+          <geometry><box size="0.018 0.030 0.008" /></geometry>
+        </collision>
+      </xacro:if>
       <inertial>
         <origin xyz="${inertia_origin_xyz}" rpy="${inertia_origin_rpy}" />
         <mass value="${mass}" />

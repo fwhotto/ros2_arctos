@@ -78,9 +78,13 @@ def test_inertias_and_mesh_alignment(include_gripper):
     for link in expand(include_gripper=include_gripper).findall("link"):
         visual = link.find("visual")
         if visual is None:
-            assert link.get("name") in {"world", "tool0"}
+            assert link.get("name") in {"world", "tool0", "grasp_frame"}
             continue
-        assert ET.tostring(visual.find("geometry")) == ET.tostring(link.find("collision/geometry"))
+        if link.get("name") in {"Left_jaw_1", "Right_jaw_1"}:
+            assert len(link.findall("collision")) == 2
+            assert all(c.find("geometry/box") is not None for c in link.findall("collision"))
+        else:
+            assert ET.tostring(visual.find("geometry")) == ET.tostring(link.find("collision/geometry"))
         points = vertices(visual.find("geometry/mesh"))
         points += np.fromstring(visual.find("origin").get("xyz"), sep=" ")
         origin = link.find("inertial/origin")

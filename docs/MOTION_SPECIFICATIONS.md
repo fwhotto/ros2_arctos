@@ -1,5 +1,10 @@
 # Manufacturer motion references and RViz gripper
 
+Follow-up: the Gazebo demo now includes a contact/friction cube grasp with
+shared simplified jaw collision pads and a pad-centre grasp frame. See
+`arctos_gazebo/README.md` and `docs/GAZEBO_VALIDATION.md` for the tested cycle,
+simulation-only assumptions and the remaining physical calibration boundary.
+
 Reviewed 2026-10-10. These findings supersede the inherited travel bounds and
 fixed-gripper preview recorded at Gate B.
 

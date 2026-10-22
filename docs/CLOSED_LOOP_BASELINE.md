@@ -49,3 +49,12 @@ CAN IDs, gear ratios, home-position photos/offsets, wrist motor directions,
 and gripper firmware/model/stroke. Compare against the table above. Then rerun
 model/collision checks and the mock/Gazebo named-pose checks after any geometry,
 limits or calibration changes.
+
+The grasp checkpoint uses a provisional `grasp_frame` at
+`[-0.00129, -0.066, 0.001367]` metres in `tool0`, rotated +90° about X. This is
+the simplified collision-pad midpoint, replacing the earlier −74 mm distal-tip
+frame. Confirm pad dimensions and friction against the actual kit. If changed,
+update the approach transform in `scripts/test_manipulation.py` and its contract
+test in `arctos_gazebo/test/test_scene.py` alongside the URDF.
+The simulated 0.5 mm positional squeeze is not a physical force command; replace
+it with suitable calibrated servo travel/current or stall handling on hardware.
