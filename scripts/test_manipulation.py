@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Validate approach; --execute moves the arm; --execute --grasp lifts/releases a cube.
+"""Gazebo-only approach, grasp, transfer, stack and push checkpoints.
 
 Only use with the Gazebo manipulation demo, not physical hardware. A failed
 grasp leaves the simulation for inspection; restart it before another attempt.
 """
 
 import argparse
+import copy
 from pathlib import Path
 import time
 
@@ -24,21 +25,53 @@ from sensor_msgs.msg import JointState
 from tf2_msgs.msg import TFMessage
 from shape_msgs.msg import SolidPrimitive
 from std_srvs.srv import SetBool
-from moveit_msgs.msg import PlanningScene, AttachedCollisionObject, CollisionObject
+from moveit_msgs.msg import PlanningScene, AttachedCollisionObject, CollisionObject, AllowedCollisionEntry
 from moveit_msgs.srv import ApplyPlanningScene
 import yaml
+
+
+def push_collision_matrix(original):
+    """Permit only intentional upper-cube/jaw contact, preserving other pairs."""
+    acm = copy.deepcopy(original)
+    for name in ("cube", "Left_jaw_1", "Right_jaw_1"):
+        if name not in acm.entry_names:
+            acm.entry_names.append(name)
+            for row in acm.entry_values:
+                row.enabled.append(False)
+            acm.entry_values.append(AllowedCollisionEntry(enabled=[False] * len(acm.entry_names)))
+    for jaw in ("Left_jaw_1", "Right_jaw_1"):
+        i, j = acm.entry_names.index("cube"), acm.entry_names.index(jaw)
+        acm.entry_values[i].enabled[j] = acm.entry_values[j].enabled[i] = True
+    return acm
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--grasp", action="store_true", help="With --execute: close, lift, set down and release")
-    parser.add_argument("--scene-config", default=str(Path(get_package_share_directory("arctos_gazebo")) / "config/manipulation.yaml"))
+    stages = parser.add_mutually_exclusive_group()
+    stages.add_argument("--transfer", action="store_true", help="With --execute: carry 40 mm sideways and release on table")
+    stages.add_argument("--stack", action="store_true", help="With --execute: stack the red cube on the blue cube")
+    stages.add_argument("--push", action="store_true", help="With --execute: stack, check stability, then push the upper cube off")
+    parser.add_argument("--scene-config", help="Must match the running launch; defaults to stacking.yaml for the new stages")
     args = parser.parse_args()
+    extended = args.transfer or args.stack or args.push
+    args.grasp = args.grasp or extended
     if args.grasp and not args.execute:
-        parser.error("--grasp requires --execute")
+        parser.error("--grasp/--transfer/--stack/--push requires --execute")
+    if not args.scene_config:
+        args.scene_config = str(Path(get_package_share_directory("arctos_gazebo")) / "config" /
+                                ("stacking.yaml" if extended else "manipulation.yaml"))
     config = yaml.safe_load(Path(args.scene_config).read_text())
-    closing = (0.03 - config["cube"]["size"][1])/2 + 0.0005
+    if (args.stack or args.push) and "support_cube" not in config:
+        parser.error("Stacking requires a support_cube in the scene configuration")
+    if extended:
+        for name in ("cube", "support_cube") if args.stack or args.push else ("cube",):
+            if not np.allclose(config[name]["size"], [0.02, 0.02, 0.02]):
+                parser.error("Transfer/stack/push currently require 20 mm cubes")
+    # This is a positional simulation squeeze, not calibrated force control.
+    squeeze = 0.0005
+    closing = (0.03 - config["cube"]["size"][1])/2 + squeeze
     if args.grasp and not 0.001 < closing < 0.014:
         parser.error("Cube width must leave usable jaw travel for the grasp")
     rclpy.init()
@@ -46,6 +79,8 @@ def main():
     latest = {}
     sync_paused = False
     gazebo_cube = {}
+    gazebo_support = {}
+    saved_acm = None
     node.create_subscription(JointState, "/joint_states", lambda msg: latest.update(zip(msg.name, msg.position)), 10)
     def receive_cube(msg):
         for transform in msg.transforms:
@@ -53,8 +88,18 @@ def main():
                 assert transform.header.frame_id == "arctos_world", "Unexpected cube reference frame"
                 p = transform.transform.translation
                 gazebo_cube["position"] = [p.x, p.y, p.z]
+                gazebo_cube["rotation"] = transform.transform.rotation
                 gazebo_cube["received"] = time.monotonic()
     node.create_subscription(TFMessage, "/cube/pose", receive_cube, 10)
+    def receive_support(msg):
+        for transform in msg.transforms:
+            if transform.child_frame_id == "support_cube":
+                assert transform.header.frame_id == "arctos_world", "Unexpected support reference frame"
+                p = transform.transform.translation
+                gazebo_support["position"] = [p.x, p.y, p.z]
+                gazebo_support["rotation"] = transform.transform.rotation
+                gazebo_support["received"] = time.monotonic()
+    node.create_subscription(TFMessage, "/support_cube/pose", receive_support, 10)
 
     def call(kind, name, request):
         client = node.create_client(kind, name)
@@ -150,7 +195,19 @@ def main():
         action.destroy()
         spin_seconds(1)
 
-    def vertical(center):
+    def grasp_position():
+        fk = GetPositionFK.Request()
+        fk.header.frame_id = "world"
+        fk.fk_link_names = ["grasp_frame"]
+        fk.robot_state = state(latest)
+        actual = call(GetPositionFK, "/compute_fk", fk)
+        assert actual.error_code.val == MoveItErrorCodes.SUCCESS
+        assert abs(actual.pose_stamped[0].pose.orientation.x) > 0.999, "Gripper tilted during Cartesian motion"
+        p = actual.pose_stamped[0].pose.position
+        return np.array([p.x, p.y, p.z])
+
+    def cartesian(center):
+        # Short, straight motions at fixed downward orientation, including push.
         cart = GetCartesianPath.Request()
         cart.header.frame_id = "world"
         cart.group_name = "arm"
@@ -166,12 +223,31 @@ def main():
         pose.orientation.w = float(np.sqrt(0.5))
         cart.waypoints = [pose]
         response = call(GetCartesianPath, "/compute_cartesian_path", cart)
-        assert response.error_code.val == MoveItErrorCodes.SUCCESS and response.fraction > 0.999, ("Vertical path", response.error_code, response.fraction)
+        assert response.error_code.val == MoveItErrorCodes.SUCCESS and response.fraction > 0.999, ("Cartesian path", center, response.error_code, response.fraction)
         execute(response.solution)
         spin_seconds(1)
+        np.testing.assert_allclose(grasp_position(), center, atol=0.003,
+                                   err_msg="Gripper did not reach Cartesian endpoint")
 
     def apply(scene):
         assert call(ApplyPlanningScene, "/apply_planning_scene", ApplyPlanningScene.Request(scene=scene)).success
+
+    def check_position(feedback, expected, tolerance=0.003):
+        assert time.monotonic() - feedback.get("received", 0) < 1, "Gazebo object feedback stale"
+        np.testing.assert_allclose(feedback["position"], expected, atol=tolerance)
+
+    def stable(expected, seconds=3, support=None):
+        finish = node.get_clock().now().nanoseconds + int(seconds * 1e9)
+        deadline = time.monotonic() + max(30, seconds * 10)
+        while node.get_clock().now().nanoseconds < finish:
+            assert time.monotonic() < deadline, "Simulation clock stopped during stability check"
+            rclpy.spin_once(node, timeout_sec=0.05)
+            check_position(gazebo_cube, expected)
+            if support is not None:
+                check_position(gazebo_support, support)
+                for feedback in (gazebo_cube, gazebo_support):
+                    q = feedback["rotation"]
+                    assert 1 - 2*(q.x*q.x + q.y*q.y) > 0.98, "Tower cube tilted"
 
     try:
         deadline = time.monotonic() + 90
@@ -180,7 +256,8 @@ def main():
         while True:
             scene = call(GetPlanningScene, "/get_planning_scene", request).scene
             objects = {obj.id: obj for obj in scene.world.collision_objects}
-            if {"table", "cube", "ground"}.issubset(objects) and len(latest) == 8:
+            required = {"table", "cube", "ground"} | ({"support_cube"} if args.stack or args.push else set())
+            if required.issubset(objects) and len(latest) == 8:
                 break
             assert time.monotonic() < deadline, "Scene/joints not ready"
             rclpy.spin_once(node, timeout_sec=0.2)
@@ -208,6 +285,21 @@ def main():
         assert abs(center[2] - (top + config["cube"]["size"][2]/2)) < 0.002, centers
         assert np.max(np.ptp(centers[-5:], axis=0)) < 0.001, "Cube not settled"
         print("PASS: cube settled on table; planning scene dimensions/pose consistent", flush=True)
+        support = None
+        destination = center.copy()
+        if args.transfer:
+            destination += [-0.04, 0, 0]
+        elif args.stack or args.push:
+            support = np.array(gazebo_support["position"])
+            expected_support = np.array(config["support_cube"]["position"])
+            expected_support[2] = top + config["support_cube"]["size"][2]/2
+            check_position(gazebo_support, expected_support)
+            support_scene = call(GetPlanningScene, "/get_planning_scene", request).scene
+            support_object = next(obj for obj in support_scene.world.collision_objects if obj.id == "support_cube")
+            np.testing.assert_allclose(support_object.primitives[0].dimensions, config["support_cube"]["size"])
+            p = support_object.pose.position
+            np.testing.assert_allclose([p.x, p.y, p.z], support, atol=0.001)
+            destination = support + [0, 0, (config["support_cube"]["size"][2] + config["cube"]["size"][2])/2]
         pre = center + [0, 0, config["approach_clearance"]]
         approach = center if args.grasp else center + [0, 0, config["cube"]["size"][2]/2 + config["surface_clearance"]]
         target = ik(pre, latest)
@@ -266,12 +358,15 @@ def main():
             assert time.monotonic() - gazebo_cube["received"] < 1
             np.testing.assert_allclose(gazebo_cube["position"], center, atol=0.001,
                                        err_msg="Cube displaced during approach")
-        destination = "around cube" if args.grasp else "above cube"
-        print(f"PASS: collision-free straight approach {destination}" + (" executed; jaws open and cube undisturbed" if args.execute else " planned"), flush=True)
+        approach_description = "around cube" if args.grasp else "above cube"
+        print(f"PASS: collision-free straight approach {approach_description}" + (" executed; jaws open and cube undisturbed" if args.execute else " planned"), flush=True)
         if args.grasp:
             gripper(closing)
             assert abs(latest["Left_jaw_joint"] - closing) < 0.002, latest
             assert abs(latest["Left_jaw_joint"] - latest["Right_jaw_joint"]) < 0.001, "Follower jaw did not close symmetrically"
+            if extended:
+                print(f"INFO: positional squeeze {squeeze*1000:.1f} mm; jaw feedback "
+                      f"{latest['Left_jaw_joint']*1000:.2f}/{latest['Right_jaw_joint']*1000:.2f} mm", flush=True)
             assert call(SetBool, "/manipulation/pause_cube_sync", SetBool.Request(data=True)).success
             sync_paused = True
             scene = call(GetPlanningScene, "/get_planning_scene", request).scene
@@ -284,7 +379,7 @@ def main():
             apply(update)
             # MoveIt attachment only updates planning geometry. No Gazebo fixed
             # joint, teleport or attachment service is used: physics must hold it.
-            vertical(center + [0, 0, 0.06])
+            cartesian(center + [0, 0, 0.06])
             deadline = time.monotonic() + 3
             while time.monotonic() < deadline:
                 rclpy.spin_once(node, timeout_sec=0.05)
@@ -292,7 +387,15 @@ def main():
                 np.testing.assert_allclose(gazebo_cube["position"], center + [0, 0, 0.06], atol=0.005,
                                            err_msg="Cube slipped or was not lifted")
             print("PASS: physical grasp lifted cube 60 mm and held for 3 seconds", flush=True)
-            vertical(center)
+            if extended:
+                carried = destination + [0, 0, 0.06]
+                cartesian(carried)
+                check_position(gazebo_cube, carried, tolerance=0.005)
+                print("PASS: physical grasp survived sideways transfer", flush=True)
+            # Leave a sub-millimetre gap over the support to avoid planning a
+            # collision. Gravity closes it after release; no Gazebo pose edits.
+            release = destination + [0, 0, 0.0005] if args.stack or args.push else destination
+            cartesian(release)
             # Remove attached geometry and resume measured world-object updates.
             update = PlanningScene(is_diff=True)
             update.robot_state.is_diff = True
@@ -303,9 +406,9 @@ def main():
             assert call(SetBool, "/manipulation/pause_cube_sync", SetBool.Request(data=False)).success
             sync_paused = False
             spin_seconds(1)
-            vertical(pre)
+            cartesian(destination + [0, 0, config["approach_clearance"]])
             spin_seconds(2)
-            np.testing.assert_allclose(gazebo_cube["position"], center, atol=0.003)
+            stable(destination, support=support)
             assert abs(latest["Left_jaw_joint"]) < 0.0001
             assert abs(latest["Right_jaw_joint"]) < 0.0001
             request.components.components |= PlanningSceneComponents.ROBOT_STATE_ATTACHED_OBJECTS
@@ -314,12 +417,40 @@ def main():
             cube = next(obj for obj in final_scene.world.collision_objects if obj.id == "cube")
             p = cube.pose.position
             np.testing.assert_allclose([p.x, p.y, p.z], gazebo_cube["position"], atol=0.001)
-            print("PASS: cube set down, released and left on table after retreat", flush=True)
+            print("PASS: cube released and stable after retreat; planning-scene ownership restored", flush=True)
+            if args.stack or args.push:
+                print("PASS: two-cube tower stood unsupported for 3 seconds after retreat", flush=True)
+            if args.push:
+                # The leading open jaw contacts the upper cube along +Y. Its
+                # pad bottom clears the lower cube. Only cube/jaw collisions
+                # are allowed, temporarily; table and lower cube stay protected.
+                request.components.components = PlanningSceneComponents.ALLOWED_COLLISION_MATRIX
+                saved_acm = call(GetPlanningScene, "/get_planning_scene", request).scene.allowed_collision_matrix
+                acm = push_collision_matrix(saved_acm)
+                start_push = destination + [0, -0.045, 0]
+                cartesian(start_push + [0, 0, 0.06])
+                cartesian(start_push)
+                apply(PlanningScene(is_diff=True, allowed_collision_matrix=acm))
+                cartesian(destination + [0, 0.005, 0])
+                cartesian(destination + [0, 0.005, 0.06])
+                apply(PlanningScene(is_diff=True, allowed_collision_matrix=saved_acm))
+                saved_acm = None
+                spin_seconds(3)
+                fallen = np.array(gazebo_cube["position"])
+                assert fallen[2] < destination[2] - 0.01, ("Upper cube did not fall", fallen)
+                assert np.linalg.norm(fallen[:2] - support[:2]) > 0.015, "Upper cube still over support"
+                assert abs(fallen[2] - (top + config["cube"]["size"][2]/2)) < 0.004, "Cube did not land on table"
+                stable(fallen, seconds=2)
+                print("PASS: physical push displaced upper cube; it fell and settled on the table", flush=True)
     finally:
-        if sync_paused:
-            node.get_logger().error("Grasp failed while cube was attached in MoveIt. No automatic release attempted; restart the simulation before retrying.")
-        node.destroy_node()
-        rclpy.shutdown()
+        try:
+            if saved_acm is not None:
+                apply(PlanningScene(is_diff=True, allowed_collision_matrix=saved_acm))
+        finally:
+            if sync_paused:
+                node.get_logger().error("Grasp failed while cube was attached in MoveIt. No automatic release attempted; restart the simulation before retrying.")
+            node.destroy_node()
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

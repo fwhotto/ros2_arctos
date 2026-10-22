@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror ground/table and the live Gazebo cube in MoveIt's collision world.
+"""Maintain ground/table and live Gazebo objects in MoveIt's collision world.
 
 The grasp script pauses cube updates while MoveIt owns attached geometry and
 resumes them after detachment. This never attaches the cube in Gazebo.
@@ -12,7 +12,7 @@ import rclpy
 from shape_msgs.msg import Plane
 from shape_msgs.msg import SolidPrimitive
 from tf2_msgs.msg import TFMessage
-from scene_objects import load_scene
+from scene_objects import load_scene, object_names
 import time
 from std_srvs.srv import SetBool
 
@@ -22,6 +22,7 @@ def main():
     node = rclpy.create_node("planning_ground")
     path = node.declare_parameter("scene_config", "").value
     config = load_scene(path) if path else None
+    dynamic_names = [name for name in object_names(config) if name != "table"] if config else []
     latest = {}
     paused = False
     def pause_sync(request, response):
@@ -34,13 +35,13 @@ def main():
         node.create_service(SetBool, "/manipulation/pause_cube_sync", pause_sync)
     def receive(msg):
         for transform in msg.transforms:
-            if transform.child_frame_id == "cube":
+            if transform.child_frame_id in dynamic_names:
                 if transform.header.frame_id != "arctos_world":
-                    raise RuntimeError("Cube pose is not expressed in Gazebo world")
-                latest["pose"] = transform.transform
-                latest["time"] = time.monotonic()
+                    raise RuntimeError("Object pose is not expressed in Gazebo world")
+                latest[transform.child_frame_id] = (transform.transform, time.monotonic())
     if config:
-        node.create_subscription(TFMessage, "/cube/pose", receive, 10)
+        for name in dynamic_names:
+            node.create_subscription(TFMessage, f"/{name}/pose", receive, 10)
     try:
         client = node.create_client(ApplyPlanningScene, "/apply_planning_scene")
         if not client.wait_for_service(timeout_sec=90):
@@ -72,31 +73,33 @@ def main():
             ready = False
             while rclpy.ok():
                 rclpy.spin_once(node, timeout_sec=0.1)
-                if "pose" not in latest:
+                if not all(name in latest for name in dynamic_names):
                     if time.monotonic() > deadline:
-                        raise RuntimeError("No Gazebo cube pose received")
+                        raise RuntimeError("Missing Gazebo object pose: " + str(set(dynamic_names) - latest.keys()))
                     continue
-                if time.monotonic() - latest["time"] > 2:
-                    raise RuntimeError("Gazebo cube pose stream became stale")
-                if paused:
-                    continue
-                cube = CollisionObject(id="cube", operation=CollisionObject.ADD)
-                cube.header.frame_id = "world"
-                cube.primitives = [SolidPrimitive(type=SolidPrimitive.BOX, dimensions=config["cube"]["size"])]
-                pose = Pose()
-                pose.position.x = latest["pose"].translation.x
-                pose.position.y = latest["pose"].translation.y
-                pose.position.z = latest["pose"].translation.z
-                pose.orientation = latest["pose"].rotation
-                cube.primitive_poses = [pose]
+                if any(time.monotonic() - latest[name][1] > 2 for name in dynamic_names):
+                    raise RuntimeError("Gazebo object pose stream became stale")
                 update = PlanningScene(is_diff=True)
-                update.world.collision_objects = [cube]
+                for name in dynamic_names:
+                    if paused and name == "cube":
+                        continue
+                    transform = latest[name][0]
+                    cube = CollisionObject(id=name, operation=CollisionObject.ADD)
+                    cube.header.frame_id = "world"
+                    cube.primitives = [SolidPrimitive(type=SolidPrimitive.BOX, dimensions=config[name]["size"])]
+                    pose = Pose()
+                    pose.position.x = transform.translation.x
+                    pose.position.y = transform.translation.y
+                    pose.position.z = transform.translation.z
+                    pose.orientation = transform.rotation
+                    cube.primitive_poses = [pose]
+                    update.world.collision_objects.append(cube)
                 future = client.call_async(ApplyPlanningScene.Request(scene=update))
                 rclpy.spin_until_future_complete(node, future, timeout_sec=5)
                 if not future.done() or not future.result().success:
-                    raise RuntimeError("Cube planning-scene update failed")
+                    raise RuntimeError("Object planning-scene update failed")
                 if not ready:
-                    node.get_logger().info("Manipulation scene ready: cube pose follows Gazebo")
+                    node.get_logger().info("Manipulation scene ready: object poses follow Gazebo")
                     ready = True
                 # Keep receiving poses while limiting scene updates to 5 Hz.
                 until = time.monotonic() + 0.2

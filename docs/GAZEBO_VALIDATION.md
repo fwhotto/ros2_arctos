@@ -1,5 +1,69 @@
 # Gazebo integration validation — 2026-10-16
 
+## Two-cube physics demo — 2026-10-22
+
+The new `stacking.launch.py` uses two 20 mm / 20 g cubes, adding an independently
+simulated blue support cube. The original single-cube scene is unchanged.
+Both cubes have mass/inertia and separate measured pose streams; neither uses
+a Gazebo joint attachment or pose edit. The existing single-cube scene remains
+available. Gazebo launches now default to `rviz:=false`; MoveIt and object
+collision-scene synchronization remain enabled. Use `rviz:=true` for debugging
+or the older interactive RViz checkpoints below.
+
+The execution script provides independent `--transfer`, `--stack` and `--push`
+stages (each requires `--execute` and a fresh scene). Transfer checks a 40 mm
+sideways carry; stacking checks both cube centres and upright orientations
+through a three-second unsupported hold after opening and retreat. The push
+allows only the upper cube/jaw collision pairs temporarily, restores the prior
+MoveIt collision matrix, and checks that the cube falls onto the table and
+settles. Scene generation and collision-matrix scope have unit-test coverage.
+
+Headless full-sequence validation of the initial 20 g variant passed in
+`/tmp/opencode/arctos-stacking-runtime` (`push-launch.log`, `push-checks.log`).
+The original single-cube grasp/release regression passed in
+`/tmp/opencode/arctos-grasp-regression`. One development run exceeded the
+existing 5 mm lifted-hold tolerance (5.05 mm lateral displacement) and was
+rejected; tolerances were not relaxed and no recovery motion was attempted.
+A repeated full-sequence run slipped 14.5 mm vertically during transport and
+was also rejected. Slower transport and increased positional squeeze were
+tried but did not resolve retention and were not retained; a 10 g trial also
+lost the cube. The new scene uses explicit rough-surface block friction of 2.0,
+preserving the original contact geometry, jaw friction of 1.0, 0.5 mm squeeze
+and motion scaling. These coefficients are simulation assumptions, not measured
+material properties. Cartesian endpoints are additionally checked
+against measured joint-state FK. This contact grasp is not guaranteed to
+succeed on every run.
+
+The final rough-surface configuration completed the full sequence, including
+the FK endpoint and simulation-time stability checks, in
+`/tmp/opencode/arctos-stacking-rough`. A sequential repeat in
+`/tmp/opencode/arctos-stacking-rough-repeat` failed the original lifted-hold
+check (7.3 mm lateral slip). A diagnostic post-close offset measurement was
+near zero on another failed lift, confirming actual slip rather than merely
+imperfect centring; that experimental compensation was not retained.
+**Reliable physical grasp retention remains a blocker.** This is an experimental
+demo, not a repeatably validated stacking implementation. No failed physics
+trial was accepted by changing the slip or final placement tolerances.
+
+The standalone transfer checkpoint for that variant passed in
+`/tmp/opencode/arctos-transfer-runtime`. Empty-world arm/gripper motion and
+five-second holds passed in `/tmp/opencode/arctos-empty-world-regression`.
+Bare-arm motion/holds passed in `/tmp/opencode/arctos-bare-regression`. A later
+parallel-load single-cube run in `/tmp/opencode/arctos-grasp-regression-final`
+lost its planning-scene synchronizer to the existing two-second pose-freshness
+guard and stopped before lifting. That failure was not counted as a pass.
+
+Standard `colcon test --packages-select arctos_gazebo`: **37 pytest cases**
+(42 including CTest wrappers), no failures/errors/skips. A single-process
+`pytest arctos_gazebo/test` invocation failed the unchanged open-pad collision
+test; that suite passed independently and on both standard CTest runs. The
+standard runner isolates suites in separate processes.
+
+See [the Gazebo README](../arctos_gazebo/README.md#two-cube-physics-demo-transfer-stack-and-push)
+for commands. This remains an idealized, slow, 20 mm cube simulation demo, not
+validation of real gripper forces or arbitrary payloads. Visual acceptance is
+still a user checkpoint.
+
 ## Physical grasp follow-up — 2026-10-22
 
 The earlier jaw-insertion blocker is resolved for the default cube by replacing

@@ -57,7 +57,7 @@ def setup(context):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         scene = module.load_scene(scene_file)
-        for name in ("table", "cube"):
+        for name in module.object_names(scene):
             objects.append(Node(package="ros_gz_sim", executable="create", output="screen",
                                 arguments=["-world", "arctos_world", "-name", name,
                                            "-string", module.model_sdf(name, scene[name]),
@@ -72,7 +72,8 @@ def setup(context):
         Node(package="ros_gz_bridge", executable="parameter_bridge", output="screen",
              arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
                         "/arctos/sim_joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
-                        "/cube/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V"],
+                         "/cube/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
+                         "/support_cube/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V"],
              remappings=[("/arctos/sim_joint_states", "/gazebo/joint_states")]),
         Node(package="robot_state_publisher", executable="robot_state_publisher",
              parameters=[moveit.robot_description, sim_time], output="screen"),
@@ -101,7 +102,7 @@ def generate_launch_description():
         DeclareLaunchArgument("gui", default_value="true"),
         DeclareLaunchArgument("render_engine", default_value="ogre",
                               description="Gazebo GUI renderer: ogre for OpenGL 2.1 VMs, ogre2 for OpenGL 3.3+"),
-        DeclareLaunchArgument("rviz", default_value="true"),
+        DeclareLaunchArgument("rviz", default_value="false"),
         DeclareLaunchArgument("moveit", default_value="true"),
         DeclareLaunchArgument("include_gripper", default_value="true"),
         DeclareLaunchArgument("scene_config", default_value="",

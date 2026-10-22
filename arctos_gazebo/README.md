@@ -11,7 +11,8 @@ source install/setup.bash
 ros2 launch arctos_gazebo demo.launch.py
 ```
 
-This starts Gazebo, the arm and gripper controllers, MoveIt and RViz. Gazebo owns
+This starts Gazebo, the arm and gripper controllers, and MoveIt. RViz is off by
+default; add `rviz:=true` for interactive planning or debugging. Gazebo owns
 the controller manager. Joint commands and initial positions are shared with
 the mock backend; the independent Gazebo state stream is `/gazebo/joint_states`.
 All robot/planning nodes use simulation time from the one-way `/clock` bridge.
@@ -53,7 +54,7 @@ Stop this launch before moving to checkpoint 2.
 
 ### 2 — Arm motion agrees between Gazebo and RViz
 
-Launch the default demo. Wait for `Planning ground ready` in the terminal and
+Launch the demo with `rviz:=true`. Wait for `Planning ground ready` in the terminal and
 active controllers. In RViz select group **arm**, current start state and named
 goal **demo**, then **Plan & Execute**. Confirm the physical-looking Gazebo arm
 and RViz robot move together and settle. Execute **home** to return.
@@ -114,7 +115,8 @@ cube, then resumed after detachment to follow the released cube again.
 
 1. Wait for `Manipulation scene ready`. Confirm the red cube rests on the grey
    table and both objects agree between Gazebo and RViz (enable Scene Geometry
-   in MotionPlanning if needed). No arm motion starts automatically.
+   in MotionPlanning if needed; launch with `rviz:=true` for this optional comparison).
+   No arm motion starts automatically.
 2. In another terminal with the same workspace sourced, from the repository root:
 
    ```bash
@@ -211,6 +213,73 @@ position control are not force control. Do not use this script on the physical
 robot; real hardware needs calibrated stroke and appropriate force/current or
 stall handling. The physical grasp is validated only for this light cube and
 slow vertical lift, not arbitrary objects, lateral accelerations or payloads.
+
+## Two-cube physics demo: transfer, stack and push
+
+**Experimental:** the complete sequence has passed headless validation, but
+repeat runs have lost the cube during lift/transport. Reliable grasp retention
+is still a blocker; this is not yet a repeatably validated demo. Checks stop on
+slippage rather than hiding it with a physics attachment or relaxed tolerances.
+
+Launch the new scene with two 20 mm / 20 g cubes (Gazebo is the only
+visualization by default):
+
+```bash
+ros2 launch arctos_gazebo stacking.launch.py
+```
+
+Wait for `Manipulation scene ready`, then in a second sourced terminal, from the
+repository root:
+
+```bash
+python3 scripts/test_manipulation.py --execute --push
+```
+
+The arm grasps the red cube, lifts it 60 mm, carries it 40 mm sideways, and
+places it on the blue cube. After opening and retreating, both dynamic cubes
+must stand unsupported for three seconds. The open gripper then pushes the
+upper cube sideways; it must fall and settle on the table. Gravity, friction
+and contact determine the result—there are no Gazebo attachments or pose edits.
+
+For smaller checkpoints, use **one** of these instead, with a **fresh launch
+for every run**:
+
+```bash
+python3 scripts/test_manipulation.py --execute --transfer
+python3 scripts/test_manipulation.py --execute --stack
+```
+
+`--transfer` places the red cube 40 mm to the opposite side on the table;
+`--stack` leaves the two-cube tower standing. These stages currently require
+20 mm cubes. If overriding `scene_config` in the launch, pass the same YAML
+with `--scene-config` to the script. Do not run scripts concurrently or use
+them on physical hardware. On failure, inspect the simulation and restart;
+there is no automatic recovery or release.
+
+The stacking scene gives the blocks an explicit rough-surface friction
+coefficient of 2.0; jaw friction remains 1.0 and positional squeeze remains
+0.5 mm. These are idealized simulation contact parameters, not measured material
+properties or a hardware force/payload rating. The original scene is unchanged.
+
+Isolated headless checks launch and clean up their own simulation:
+
+```bash
+python3 scripts/validate_gazebo.py --transfer
+python3 scripts/validate_gazebo.py --stack
+python3 scripts/validate_gazebo.py --push
+```
+
+Logs default to `/tmp/opencode/arctos-gazebo-runtime/{transfer,stack,push}-*.log`.
+Checks use fresh measured Gazebo poses, not just trajectory completion, and
+verify planning attachment cleanup after release. During the deliberate push,
+only upper-cube/jaw collision pairs are temporarily allowed in MoveIt; table,
+lower-cube and other robot collision checks remain active. The prior collision
+matrix is restored afterward, including on a failed push.
+
+RViz is optional (`rviz:=true`) for viewing planned paths, collision geometry
+or TF. Disabling it does **not** disable MoveIt or measured-object collision
+scene synchronization. Both cubes are synchronized independently; only the
+carried red cube's updates pause while it is attached for planning.
 
 ## Physics details
 
