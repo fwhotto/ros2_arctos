@@ -1,0 +1,11 @@
+# World coordinates in metres; table dimensions are its solid pedestal box.
+table:
+  size: [0.24, 0.24, 0.25]
+  position: [0.0, -0.38, 0.124]
+cube:
+  size: [0.02, 0.02, 0.02]
+  position: [0.0, -0.38, 0.261]
+  mass: 0.02
+approach_clearance: 0.06
+# Pause above the cube until conservative jaw contact geometry is refined.
+surface_clearance: 0.005

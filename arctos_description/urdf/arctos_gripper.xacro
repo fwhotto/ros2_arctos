@@ -22,6 +22,13 @@
     <joint name="${prefix}Gripper_joint" type="fixed">
       <parent link="${prefix}tool0" /><child link="${prefix}Gripper_1" />
     </joint>
+    <!-- Mesh-derived pad centre. +Z points out of the fingers (-Y in tool0),
+         +Y is the closing axis. Provisional until measured on the actual kit. -->
+    <link name="${prefix}grasp_frame" />
+    <joint name="${prefix}grasp_frame_joint" type="fixed">
+      <parent link="${prefix}tool0" /><child link="${prefix}grasp_frame" />
+      <origin xyz="-0.00129 -0.074 0.001367" rpy="${pi/2} 0 0" />
+    </joint>
     <joint name="${prefix}Left_jaw_joint" type="prismatic">
       <parent link="${prefix}Gripper_1" /><child link="${prefix}Left_jaw_1" />
       <axis xyz="0 0 -1" />

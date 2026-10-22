@@ -1,5 +1,39 @@
 # Gazebo integration validation — 2026-10-16
 
+## Manipulation-scene follow-up — 2026-10-22
+
+Implemented a configurable static table and dynamic 20 mm / 20 g cube, a
+mesh-derived distal `grasp_frame`, and explicit Gazebo-to-MoveIt cube pose
+synchronization. The existing empty-world launch remains the default.
+
+Fresh build: four packages; **38 pytest cases** (44 including six CTest
+wrappers), zero errors/failures/skips. Tests include shared scene/SDF geometry,
+cube inertia, invalid configuration rejection and grasp-frame transform.
+
+Headless manipulation checks passed twice after adding a high-wrist transit
+constraint: cube settling, fresh Gazebo/planning-scene pose agreement,
+pre-grasp execution, rejection of a table-intersecting target, and complete
+collision-checked Cartesian approach. Executed frame position is within 3 mm,
+arm endpoint error below 0.01 rad, orientation downward, jaw travel within
+0.1 mm of open, and cube displacement below 1 mm. The original empty-world
+arm/gripper execution and five-second holds also pass as a regression check.
+
+Evidence: `/tmp/opencode/arctos-manipulation-final` and
+`/tmp/opencode/arctos-manipulation-repeat`; build transcript:
+`/tmp/opencode/arctos-manipulation-build.log`. Test launches are shut down.
+
+**Acceptance boundary:** the frame stops 5 mm above the cube top. Earlier trials
+inserting open jaws around the cube exposed Gazebo convex-hull contact not
+predicted by MoveIt's triangle meshes. A low free-space transit also displaced
+the cube in one trial; the pre-grasp path now constrains wrist height. These
+failures were not accepted by relaxing endpoint or displacement checks.
+Jaw insertion/contact geometry refinement remains necessary before grasping.
+No object attachment, closing-on-object, lift or release is implemented here.
+
+Visual user checkpoints: table/cube placement agrees in Gazebo and RViz; the
+open jaws point down and approach without touching or disturbing the cube.
+See the Gazebo README's table/cube checkpoint for launch and execution commands.
+
 ## Automated checkpoints completed
 
 1. Fresh Jazzy dependency/build validation: four packages; **34 pytest cases**

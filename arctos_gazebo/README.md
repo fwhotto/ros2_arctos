@@ -24,15 +24,16 @@ simulator/controller checkpoint alone. Run only one demo per ROS domain.
 
 ### VM graphics compatibility
 
-If Gazebo reports `OpenGL 3.3 is not supported` and crashes in Ogre2 while RViz
-reports OpenGL 2.1, select the legacy Ogre GUI renderer:
+Both launch files default to the legacy Ogre GUI renderer for OpenGL 2.1 VM
+compatibility. No renderer argument is needed:
 
 ```bash
-ros2 launch arctos_gazebo demo.launch.py render_engine:=ogre
+ros2 launch arctos_gazebo demo.launch.py
 ```
 
 After updating the launch file, rebuild `arctos_gazebo` and source the workspace.
 This changes the GUI renderer only; Bullet physics and controllers are identical.
+On machines supporting OpenGL 3.3+, optionally select `render_engine:=ogre2`.
 Alternatively, `gui:=false` runs Gazebo physics with RViz still available.
 The missing Octomap sensor and `/recognize_objects` messages refer to optional
 perception features and are unrelated to the OpenGL crash.
@@ -91,7 +92,74 @@ Add `--bare` for the bare-arm variant. This commands motion. Arm tolerance is
 0.01 rad; jaw tolerance is 0.1 mm. Both ros2_control feedback and Gazebo's separate
 joint-state stream must remain fresh and agree throughout each hold.
 
-## Physics scope
+## Table/cube approach checkpoint
+
+```bash
+ros2 launch arctos_gazebo manipulation.launch.py
+```
+
+This adds a solid 24×24 cm pedestal/table with a 25 cm top height above the
+ground, plus a dynamic 20 mm, 20 g cube. The cube starts 2 mm above the table
+and settles under gravity. The table and cube share one configuration:
+`arctos_gazebo/config/manipulation.yaml`. Override with
+`scene_config:=/absolute/path/to/custom.yaml`. The empty-world demo is unchanged.
+
+The table is mirrored into MoveIt from configuration; the cube's measured
+Gazebo world pose (`/cube/pose`) updates its MoveIt collision object at 5 Hz.
+This is an explicit object synchronizer, not automatic scene discovery or a TF
+broadcaster. It must change when attached-object/grasp ownership is introduced.
+
+### User checkpoints
+
+1. Wait for `Manipulation scene ready`. Confirm the red cube rests on the grey
+   table and both objects agree between Gazebo and RViz (enable Scene Geometry
+   in MotionPlanning if needed). No arm motion starts automatically.
+2. In another terminal with the same workspace sourced, from the repository root:
+
+   ```bash
+   python3 scripts/test_manipulation.py
+   ```
+
+   This checks settling, scene consistency, a valid pre-grasp/approach plan,
+   and rejection of a table-intersecting target, **without commanding motion**.
+3. To see the motion, start from the initial open-jaw pose and run:
+
+   ```bash
+   python3 scripts/test_manipulation.py --execute
+   ```
+
+   The arm moves above the cube and lowers straight down, stopping with the
+   provisional `grasp_frame` 5 mm above the cube's top. Confirm the open fingers
+   point down, remain clear of the table/cube, and both windows agree. The test
+   leaves the arm at that endpoint. Relaunch to repeat from the initial pose.
+
+The pre-grasp frame starts 60 mm above the cube centre; `approach_clearance`
+and `surface_clearance` are configurable. The mesh-derived `grasp_frame` is at
+the distal jaw-pad midpoint, 74 mm along −Y from `tool0`, with local +Z pointing
+out of the fingers. It is provisional until checked against the actual kit.
+The approach uses `tool0` Cartesian waypoints transformed to that frame,
+because the KDL chain is configured with `tool0` as its solver tip.
+During pre-grasp transit a path constraint keeps `tool0` at least 100 mm above
+the tabletop, avoiding low sweeping motions before the straight approach.
+
+**Scope limit:** insertion around the cube is not accepted yet. The conservative
+convex jaw collision shapes in Gazebo can contact a 20 mm cube before MoveIt's
+mesh geometry predicts contact. The checkpoint therefore stops above it rather
+than allowing contacts or relaxing validation tolerances. Closing, attachment,
+lifting and release are not implemented here.
+
+For an isolated automated execution/cleanup:
+
+```bash
+python3 scripts/validate_gazebo.py --scene
+```
+
+It checks a settled cube against Gazebo feedback, planning-scene geometry,
+pre-grasp execution, table collision rejection, a complete Cartesian approach,
+executed position/orientation, open jaws and an undisturbed cube. Logs are
+`manipulation-launch.log` and `manipulation-checks.log` in the output directory.
+
+## Physics details
 
 The world uses gravity, a fixed world anchor, 1 ms physics steps and **Bullet
 Featherstone**. The installed DART engine did not move the mimic follower;

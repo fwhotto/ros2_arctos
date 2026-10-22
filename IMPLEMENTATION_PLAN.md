@@ -217,6 +217,13 @@ will be assessed in Gate D.
 
 ## D. Gazebo integration
 
+**2026-10-22 follow-up:** configurable table/cube scene and a contact-free
+pre-grasp approach are implemented. Headless settling, scene synchronization,
+collision rejection and executed approach checks pass; visual acceptance is
+pending. The approach pauses above the cube because Gazebo's conservative jaw
+collision hulls still need refinement before insertion/grasping. See
+`docs/GAZEBO_VALIDATION.md` and `arctos_gazebo/README.md` for checkpoints.
+
 **2026-10-16 checkpoint:** `arctos_gazebo/demo.launch.py` now runs Harmonic with
 Bullet Featherstone, the shared arm/gripper interfaces, simulated clock, world
 anchor and a planning-scene ground. Fresh build/model checks and headless
