@@ -301,6 +301,6 @@ Evidence and remaining checkpoints: [Gazebo validation](../docs/GAZEBO_VALIDATIO
 ## Voron V0.2 printer model
 
 `models/voron_v02` and `worlds/voron_printer.sdf` add a Voron V0.2 with a
-passive hinged door for printer tending. Generate its meshes before building
+passive hinged door for printer tending. Run `scripts/generate_voron_meshes.sh` before building
 and set `GZ_SIM_RESOURCE_PATH`; see [the model notes](../docs/VORON_SIM_MODEL.md).
 The arm is not yet placed in that world.

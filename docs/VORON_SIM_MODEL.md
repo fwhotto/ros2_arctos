@@ -6,6 +6,7 @@ approved the split, limits and bed pose in `VORON_MEASUREMENTS.md`.
 
 | File | Role |
 | --- | --- |
+| `scripts/generate_voron_meshes.sh` | One command: download and verify the CAD, then write the meshes |
 | `scripts/build_voron_sdf.py` | Generates meshes and `model.sdf` from the hash-verified STEP |
 | `arctos_gazebo/models/voron_v02/model.sdf` | Generated model, SDF 1.9 (committed) |
 | `arctos_gazebo/models/voron_v02/meshes/` | Derived GPL-3.0 visual meshes (generated, git-ignored) |
@@ -13,19 +14,78 @@ approved the split, limits and bed pose in `VORON_MEASUREMENTS.md`.
 | `arctos_gazebo/worlds/voron_printer.sdf` | Printer-only world: printer and a 20 mm cube on the bed |
 | `arctos_gazebo/test/test_voron_model.py` | Joint, inertia, finger-gap, cube-pose and `gz sdf --check` tests |
 
-## Generate
+## Generate the meshes (VM or any Linux/macOS machine)
 
-Needs `~/voron-inspection` from `scripts/inspect_voron_cad.py --fetch-only`
-(hash-verified download). Run from the repository root, with the CAD skill's
-pinned Python, before `colcon build` so the meshes are installed:
+The meshes are not in Git, so every checkout generates them once, **before**
+`colcon build` (the build copies whatever is in `models/` into `install/`).
+Without them Gazebo still loads the collision boxes, but the printer is invisible.
+
+### 1. Install uv (once)
+
+`uv` runs the CAD tool in its own Python 3.13, separate from ROS's Python. Use the
+[official installer](https://docs.astral.sh/uv/getting-started/installation/),
+then open a new terminal and check it:
+
+```bash
+uv --version
+```
+
+### 2. Generate
+
+From the repository root:
+
+```bash
+scripts/generate_voron_meshes.sh
+```
+
+This:
+
+1. downloads the pinned Voron CAD (32 MB ZIP, 179 MB STEP) into
+   `~/voron-inspection` and checks every SHA256 hash (files already there are
+   reused, never overwritten);
+2. turns off the CAD tool's optional telemetry;
+3. writes seven STL files (about 31 MB) into
+   `arctos_gazebo/models/voron_v02/meshes/`. `model.sdf` is not changed.
+
+Plan for the first run: uv downloads the CAD runtime (several hundred MB), and
+the first import of the 179 MB STEP took about 2.5 minutes and 650 MB of memory
+on an 8 GB Mac (it also needed more than 2 minutes on the earlier VM). Give the VM at least 4 GB of RAM and about 2 GB of disk.
+Later runs reuse the cache and take under a minute. It is safe to run with a ROS
+workspace sourced: the script unsets `PYTHONPATH`.
+
+Options: `VORON_CAD_DIR=/other/dir scripts/generate_voron_meshes.sh` stores the
+CAD elsewhere; `scripts/generate_voron_meshes.sh --mesh-tolerance 0.5` makes
+lighter meshes (mm chord tolerance, default 0.25) if the VM's GUI is slow.
+
+### 3. Build
+
+```bash
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-select arctos_gazebo && source install/setup.bash
+ls install/arctos_gazebo/share/arctos_gazebo/models/voron_v02/meshes
+```
+
+The last line should list the seven `.stl` files. If you generate the meshes
+after building, build again.
+
+### Alternative: copy meshes from another machine
+
+If the VM has no internet access, generate the meshes on another machine and copy
+the folder over (they are identical for the same commit), for example:
+
+```bash
+scp -r arctos_gazebo/models/voron_v02/meshes <vm-user>@<vm-host>:<repo-on-vm>/arctos_gazebo/models/voron_v02/
+```
+
+### Regenerating model.sdf
+
+Only needed after changing `scripts/build_voron_sdf.py` (edit the generator, not
+`model.sdf`). This rewrites both the meshes and `model.sdf`:
 
 ```bash
 uvx --no-config --managed-python --python 3.13 --from cadgen==0.7.26 python \
   scripts/build_voron_sdf.py
 ```
-
-About 30 s and 32 MB of STL. `--mesh-tolerance` (mm, default 0.25) trades mesh
-size for detail. Edit the generator, not `model.sdf`.
 
 ## Run the printer-only checkpoint
 

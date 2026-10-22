@@ -131,6 +131,8 @@ def main():
     parser.add_argument("--model-dir", type=Path,
                         default=Path(__file__).resolve().parents[1] / "arctos_gazebo/models/voron_v02")
     parser.add_argument("--mesh-tolerance", type=float, default=0.25, help="chord tolerance, mm")
+    parser.add_argument("--meshes-only", action="store_true",
+                        help="write meshes but leave the committed model.sdf untouched")
     args = parser.parse_args()
     step = args.directory / STEP_NAME
     verified_bytes(step, STEP_SHA256)
@@ -173,6 +175,8 @@ def main():
         colour = COLOURS["accent" if (link == "door" and group == "printed") else group]
         visuals[link].append(mesh_visual(name, f"meshes/{name}.stl", link, colour))
         print(f"mesh {path.name}: {len(shapes)} parts, {path.stat().st_size / 1e6:.1f} MB")
+    if args.meshes_only:
+        return
 
     props = {link: mass_properties(bodies) for link, bodies in mass_bodies.items()}
 
